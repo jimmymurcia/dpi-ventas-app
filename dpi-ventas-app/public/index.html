@@ -21,6 +21,422 @@
             --bg-color: #f4f7f6; 
             --border-color: #e3e8ee;
         }
+
+        // ✅ FUNCIONES DEL PROCESO DE PRE-CALIFICACIÓN
+        function iniciarProceso() {
+            const procesoPanel = document.getElementById('procesoPanel');
+            if (procesoPanel) {
+                procesoPanel.style.display = 'block';
+                
+                // Scroll suave hacia el proceso
+                setTimeout(() => {
+                    procesoPanel.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+
+        /*
+        📋 ENDPOINTS NECESARIOS EN EL BACKEND PARA CLIENTES POTENCIALES
+
+        Para que el sistema de clientes potenciales funcione completamente,
+        necesitas agregar estos endpoints a tu server.js:
+
+        1. GET /api/clientes-potenciales
+           - Retorna array de todos los clientes potenciales
+           - Incluir JOIN con información de vendedor si existe
+
+        2. POST /api/clientes-potenciales
+           - Crea nuevo cliente potencial
+           - Requiere autenticación (mismo middleware requireAuth)
+           - Campos: nombre, tipo, contacto, telefono, caracteristicas, necesidad, 
+                    presupuesto, urgencia, proximosPasos, vendedor, fecha
+
+        3. PUT /api/clientes-potenciales/:id
+           - Actualiza cliente potencial existente
+           - Requiere autenticación
+
+        4. DELETE /api/clientes-potenciales/:id
+           - Elimina cliente potencial
+           - Requiere autenticación
+
+        TABLA SQL REQUERIDA:
+        
+        CREATE TABLE clientes_potenciales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            contacto TEXT,
+            telefono TEXT,
+            caracteristicas TEXT NOT NULL,
+            necesidad TEXT NOT NULL,
+            presupuesto TEXT,
+            urgencia TEXT,
+            proximos_pasos TEXT,
+            vendedor TEXT,
+            fecha_contacto DATE,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        Después de implementar estos endpoints, reemplaza los comentarios TODO
+        en el código JavaScript con las llamadas reales a la API.
+        */
+                }, 100);
+                
+                showAlert('🎯 Proceso de calificación iniciado. Sigue cada etapa en orden.', 'success');
+            }
+        }
+        
+        function cerrarProceso() {
+            const procesoPanel = document.getElementById('procesoPanel');
+            if (procesoPanel) {
+                procesoPanel.style.display = 'none';
+                showAlert('📋 Proceso de calificación cerrado', 'success');
+            }
+        }
+        
+        function irACategoria(categoria) {
+            // Cerrar proceso
+            cerrarProceso();
+            
+            // Navegar a la categoría
+            const tabs = Array.from(document.querySelectorAll('.tab'));
+            const targetTab = tabs.find(tab => {
+                const tabText = tab.textContent.toLowerCase();
+                return tabText.includes(categoria);
+            });
+            
+            if (targetTab) {
+                showTab(categoria, targetTab);
+                
+                // Scroll suave hacia los scripts
+                setTimeout(() => {
+                    document.getElementById('categoryTabs').scrollIntoView({ 
+                        behavior: 'smooth' 
+                    });
+                }, 100);
+                
+                showAlert(`📝 Mostrando scripts de ${getCategoryName(categoria)}`, 'success');
+            }
+        }
+        
+        function tomarDecision(decision) {
+            const messages = {
+                'verde': {
+                    title: '🟢 DECISIÓN: PROCEDER A COTIZACIÓN',
+                    message: 'Cliente calificado correctamente. Puedes invertir tiempo en una cotización formal.',
+                    category: 'cierre'
+                },
+                'amarillo': {
+                    title: '🟡 DECISIÓN: INVESTIGAR MÁS',
+                    message: 'Cliente necesita más calificación. Programa una segunda llamada con preguntas específicas.',
+                    category: 'calificacion'
+                },
+                'rojo': {
+                    title: '🔴 DECISIÓN: PAUSAR PROCESO',
+                    message: 'Cliente no calificado. No inviertas tiempo en cotización. Usa scripts básicos.',
+                    category: 'bienvenida'
+                }
+            };
+            
+            const msg = messages[decision];
+            showAlert(msg.message, decision === 'verde' ? 'success' : 'error');
+            
+            // Mostrar modal con la decisión
+            if (confirm(`${msg.title}\n\n${msg.message}\n\n¿Quieres ver los scripts recomendados para esta situación?`)) {
+                irACategoria(msg.category);
+            } else {
+                cerrarProceso();
+            }
+        }
+
+        // ✅ MANEJO DE RECURSOS Y HERRAMIENTAS (DESHABILITADO - EN DESARROLLO)
+        function abrirRecurso(tipo) {
+            // Recursos temporalmente deshabilitados
+            showAlert('🚧 Esta sección está en desarrollo. Estará disponible próximamente.', 'error');
+            return;
+        }
+
+        // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
+        async function cargarClientesPotenciales() {
+            const container = document.getElementById('clientesPotencialesList');
+            if (!container) return;
+            
+            container.innerHTML = '<div class="loading">Cargando clientes potenciales...</div>';
+            
+            try {
+                // ✅ USAR API REAL
+                const data = await apiCall('/api/clientes-potenciales');
+                CLIENTES_POTENCIALES = data;
+                renderClientesPotenciales();
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ Error al cargar clientes potenciales: ${error.message}
+                        <br><br>
+                        <button onclick="cargarClientesPotenciales()" class="copy-btn">🔄 Reintentar</button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderClientesPotenciales() {
+            const container = document.getElementById('clientesPotencialesList');
+            if (!container) return;
+            
+            if (CLIENTES_POTENCIALES.length === 0) {
+                container.innerHTML = `
+                    <div class="cliente-empty">
+                        📝 No hay clientes potenciales registrados.<br>
+                        ¡Agrega el primero usando el botón de arriba!
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = CLIENTES_POTENCIALES.map(cliente => createClienteCard(cliente)).join('');
+        }
+        
+        function createClienteCard(cliente) {
+            const tipoLabels = {
+                restaurante: "🍽️ Restaurante",
+                retail: "🏪 Retail", 
+                servicios: "💼 Servicios",
+                clinica: "🏥 Clínica",
+                empresa: "🏢 Empresa",
+                otro: "📋 Otro"
+            };
+            
+            const presupuestoLabels = {
+                bajo: "Bajo ($500-$2K)",
+                medio: "Medio ($2K-$5K)", 
+                alto: "Alto ($5K+)"
+            };
+            
+            const urgenciaLabels = {
+                baja: "Sin prisa",
+                media: "1-2 meses",
+                alta: "< 1 mes"
+            };
+            
+            return `
+                <div class="cliente-potencial-card">
+                    <div class="cliente-header">
+                        <div class="cliente-nombre">${cliente.nombre}</div>
+                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
+                    </div>
+                    
+                    <div class="cliente-info">
+                        <div class="cliente-field">
+                            <strong>Contacto:</strong> ${cliente.contacto || 'No especificado'}
+                        </div>
+                        <div class="cliente-field">
+                            <strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}
+                        </div>
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>¿Por qué es potencial?</strong><br>
+                        ${cliente.caracteristicas}
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>Necesidad identificada:</strong><br>
+                        ${cliente.necesidad}
+                    </div>
+                    
+                    ${cliente.proximosPasos ? `
+                        <div class="cliente-descripcion">
+                            <strong>Próximos pasos:</strong><br>
+                            ${cliente.proximosPasos}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="cliente-tags">
+                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                    </div>
+                    
+                    <div class="cliente-footer">
+                        <div>
+                            <strong>Vendedor:</strong> ${cliente.vendedor || 'No especificado'} | 
+                            <strong>Fecha:</strong> ${cliente.fecha ? new Date(cliente.fecha).toLocaleDateString() : 'No especificada'}
+                        </div>
+                        <div class="cliente-actions">
+                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
+                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function abrirFormularioCliente() {
+            const formulario = document.getElementById('formularioCliente');
+            const titulo = document.getElementById('tituloFormulario');
+            
+            if (formulario && titulo) {
+                // Limpiar formulario
+                document.getElementById('clienteForm').reset();
+                document.getElementById('clienteId').value = '';
+                currentEditingClienteId = null;
+                
+                titulo.textContent = '➕ Agregar Nuevo Cliente Potencial';
+                formulario.style.display = 'block';
+                
+                // Scroll al formulario
+                setTimeout(() => {
+                    formulario.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+                
+                showAlert('📝 Formulario abierto. Completa la información del cliente potencial.', 'success');
+            }
+        }
+        
+        function cerrarFormularioCliente() {
+            const formulario = document.getElementById('formularioCliente');
+            if (formulario) {
+                formulario.style.display = 'none';
+                currentEditingClienteId = null;
+            }
+        }
+        
+        function editarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) {
+                showAlert('Cliente no encontrado', 'error');
+                return;
+            }
+            
+            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            // Llenar formulario con datos del cliente
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('clienteNombre').value = cliente.nombre;
+            document.getElementById('clienteTipo').value = cliente.tipo;
+            document.getElementById('clienteContacto').value = cliente.contacto || '';
+            document.getElementById('clienteTelefono').value = cliente.telefono || '';
+            document.getElementById('clienteCaracteristicas').value = cliente.caracteristicas;
+            document.getElementById('clienteNecesidad').value = cliente.necesidad;
+            document.getElementById('clientePresupuesto').value = cliente.presupuesto || '';
+            document.getElementById('clienteUrgencia').value = cliente.urgencia || '';
+            document.getElementById('clienteProximosPasos').value = proximosPasos || '';
+            document.getElementById('clienteVendedor').value = cliente.vendedor || '';
+            document.getElementById('clienteFecha').value = fechaContacto || '';
+            
+            currentEditingClienteId = id;
+            
+            // Mostrar formulario
+            const formulario = document.getElementById('formularioCliente');
+            const titulo = document.getElementById('tituloFormulario');
+            
+            if (formulario && titulo) {
+                titulo.textContent = `✏️ Editando: ${cliente.nombre}`;
+                formulario.style.display = 'block';
+                
+                setTimeout(() => {
+                    formulario.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+        
+        async function eliminarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            try {
+                // ✅ USAR API REAL
+                await apiCall(`/api/clientes-potenciales/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                });
+                
+                // Actualizar array local
+                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                renderClientesPotenciales();
+                showAlert('Cliente eliminado exitosamente', 'success');
+                
+            } catch (error) {
+                showAlert(`Error al eliminar cliente: ${error.message}`, 'error');
+            }
+        }
+        
+        // Event listener para el formulario de clientes
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... código existente ...
+            
+            // Agregar listener para formulario de clientes
+            const clienteForm = document.getElementById('clienteForm');
+            if (clienteForm) {
+                clienteForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    // Recopilar datos del formulario
+                    const clienteData = {
+                        nombre: document.getElementById('clienteNombre').value.trim(),
+                        tipo: document.getElementById('clienteTipo').value,
+                        contacto: document.getElementById('clienteContacto').value.trim(),
+                        telefono: document.getElementById('clienteTelefono').value.trim(),
+                        caracteristicas: document.getElementById('clienteCaracteristicas').value.trim(),
+                        necesidad: document.getElementById('clienteNecesidad').value.trim(),
+                        presupuesto: document.getElementById('clientePresupuesto').value,
+                        urgencia: document.getElementById('clienteUrgencia').value,
+                        proximosPasos: document.getElementById('clienteProximosPasos').value.trim(),
+                        vendedor: document.getElementById('clienteVendedor').value.trim(),
+                        fecha: document.getElementById('clienteFecha').value
+                    };
+                    
+                    // Validaciones básicas
+                    if (!clienteData.nombre || !clienteData.tipo || !clienteData.caracteristicas || !clienteData.necesidad) {
+                        showAlert('Por favor completa todos los campos obligatorios', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        if (currentEditingClienteId) {
+                            // ✅ EDITAR CON API REAL
+                            await apiCall(`/api/clientes-potenciales/${currentEditingClienteId}`, { 
+                                method: 'PUT', 
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer DPI2025Admin' 
+                                },
+                                body: JSON.stringify(clienteData) 
+                            });
+                            showAlert('Cliente actualizado exitosamente', 'success');
+                        } else {
+                            // ✅ CREAR CON API REAL
+                            await apiCall('/api/clientes-potenciales', { 
+                                method: 'POST', 
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer DPI2025Admin' 
+                                },
+                                body: JSON.stringify(clienteData) 
+                            });
+                            showAlert('Cliente potencial agregado exitosamente', 'success');
+                        }
+                        
+                        // Recargar datos desde el servidor
+                        await cargarClientesPotenciales();
+                        cerrarFormularioCliente();
+                        
+                    } catch (error) {
+                        showAlert(`Error al guardar cliente: ${error.message}`, 'error');
+                    }
+                });
+            }
+            
+            // Cargar clientes potenciales al inicializar
+            cargarClientesPotenciales();
+        });
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Inter', sans-serif; 
@@ -235,6 +651,914 @@
         
         .semaforo-light.rojo .semaforo-list li::before {
             content: '•';
+        }
+        
+        /* 📋 PROCESO DE PRE-CALIFICACIÓN */
+        .precalificacion-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .precalificacion-header p {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .proceso-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .proceso-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .proceso-panel {
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .etapas-container {
+            display: grid;
+            gap: 25px;
+        }
+        
+        .etapa {
+            background: var(--bg-color);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .etapa:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .etapa-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .etapa-numero {
+            background: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+        
+        .etapa-header h3 {
+            flex: 1;
+            margin: 0;
+            color: var(--dark-color);
+        }
+        
+        .etapa-tiempo {
+            background: var(--warning-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .etapa-content {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .objetivo {
+            background: rgba(15, 167, 149, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .preguntas-clave {
+            background: rgba(255, 193, 7, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .preguntas-clave ul, .objetivo ul {
+            margin: 10px 0 0 20px;
+        }
+        
+        .preguntas-clave li, .objetivo li {
+            margin: 5px 0;
+            font-style: italic;
+        }
+        
+        .señales-alerta {
+            background: rgba(220, 53, 69, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .alerta {
+            display: inline-block;
+            background: var(--danger-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin: 3px;
+        }
+        
+        .validacion-presupuesto {
+            background: rgba(40, 167, 69, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--success-color);
+            font-style: italic;
+        }
+        
+        .usar-script-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            justify-self: start;
+        }
+        
+        .usar-script-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .decision-matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .decision-verde, .decision-amarillo, .decision-rojo {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .decision-verde {
+            background: rgba(76, 175, 80, 0.1);
+            border: 2px solid var(--success-color);
+        }
+        
+        .decision-amarillo {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid var(--warning-color);
+        }
+        
+        .decision-rojo {
+            background: rgba(220, 53, 69, 0.1);
+            border: 2px solid var(--danger-color);
+        }
+        
+        .decision-btn {
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .decision-btn.verde {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .decision-btn.amarillo {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .decision-btn.rojo {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .decision-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .proceso-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid var(--border-color);
+        }
+        
+        .cerrar-proceso-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .tiempo-total {
+            font-weight: 600;
+            color: var(--info-color);
+        }
+        
+        /* Responsive para proceso de calificación */
+        @media (max-width: 768px) {
+            .decision-matrix {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .etapa-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .proceso-footer {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .precalificacion-header {
+                padding: 15px;
+            }
+            
+            .precalificacion-header p {
+                font-size: 1em;
+            }
+        }
+        
+        /* 👤 PERFIL DE CLIENTE IDEAL */
+        .cliente-ideal-container {
+            display: grid;
+            gap: 25px;
+        }
+        
+        .perfil-section {
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid;
+        }
+        
+        .perfil-section.neutral {
+            background: rgba(255, 193, 7, 0.05);
+            border-color: var(--warning-color);
+        }
+        
+        .perfil-section h3 {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+        
+        .perfil-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        
+        .perfil-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .perfil-card h4 {
+            margin-bottom: 10px;
+            color: var(--dark-color);
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .perfil-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .perfil-card li {
+            padding: 4px 0;
+            color: #555;
+            font-size: 0.9em;
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .perfil-card li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        /* 🛠️ RECURSOS Y HERRAMIENTAS */
+        .recursos-container {
+            display: grid;
+            gap: 30px;
+        }
+        
+        .recursos-section h3 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            font-size: 1.2em;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        .recursos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .recurso-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .recurso-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-color: var(--primary-color);
+        }
+        
+        .recurso-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--bg-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+        
+        .recurso-info {
+            flex: 1;
+        }
+        
+        .recurso-info h4 {
+            margin: 0 0 5px 0;
+            color: var(--dark-color);
+            font-size: 1em;
+            font-weight: 600;
+        }
+        
+        .recurso-info p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .recurso-arrow {
+            font-size: 1.2em;
+            color: var(--primary-color);
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        /* Colores específicos para diferentes tipos de recursos */
+        .recurso-card.calculadora .recurso-icon { background: rgba(15, 167, 149, 0.1); }
+        .recurso-card.lista-precios .recurso-icon { background: rgba(255, 193, 7, 0.1); }
+        .recurso-card.descuentos .recurso-icon { background: rgba(40, 167, 69, 0.1); }
+        .recurso-card.cotizacion .recurso-icon { background: rgba(23, 162, 184, 0.1); }
+        .recurso-card.contrato .recurso-icon { background: rgba(108, 117, 125, 0.1); }
+        .recurso-card.portfolio .recurso-icon { background: rgba(220, 53, 69, 0.1); }
+        .recurso-card.whatsapp .recurso-icon { background: rgba(37, 211, 102, 0.1); }
+        .recurso-card.drive .recurso-icon { background: rgba(66, 133, 244, 0.1); }
+        .recurso-card.catalogo .recurso-icon { background: rgba(156, 39, 176, 0.1); }
+        
+        .recurso-card.contacto {
+            cursor: default;
+        }
+        
+        .recurso-card.contacto:hover {
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .recurso-card.contacto .recurso-icon {
+            background: rgba(15, 167, 149, 0.1);
+        }
+        
+        /* 🚧 OVERLAY DE DESARROLLO */
+        .recursos-panel {
+            position: relative;
+        }
+        
+        .recursos-panel .recursos-container {
+            filter: blur(3px);
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        .desarrollo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            z-index: 10;
+        }
+        
+        .desarrollo-content {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            border: 2px solid var(--border-color);
+            max-width: 500px;
+        }
+        
+        .desarrollo-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .desarrollo-content h3 {
+            color: var(--dark-color);
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .desarrollo-content p {
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .desarrollo-subtitle {
+            font-size: 0.9em;
+            font-style: italic;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* Responsive para overlay de desarrollo */
+        @media (max-width: 480px) {
+            .desarrollo-overlay {
+                padding: 10px;
+            }
+            
+            .desarrollo-content {
+                padding: 20px 15px;
+                margin: 0 10px;
+            }
+            
+            .desarrollo-content h3 {
+                font-size: 1.1em;
+            }
+            
+            .desarrollo-icon {
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            
+            .desarrollo-content p {
+                font-size: 0.85em;
+            }
+        }
+        
+        /* 📝 SISTEMA DINÁMICO DE CLIENTES POTENCIALES */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-header h3 {
+            margin: 0;
+        }
+        
+        .agregar-cliente-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .agregar-cliente-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .section-description {
+            background: rgba(255, 193, 7, 0.1);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .formulario-cliente {
+            background: white;
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .form-header h4 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+        
+        .cerrar-form-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+            font-size: 0.9em;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .guardar-cliente-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .guardar-cliente-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .cancelar-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .clientes-potenciales-lista {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .cliente-potencial-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .cliente-potencial-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .cliente-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .cliente-nombre {
+            font-weight: 700;
+            color: var(--dark-color);
+            font-size: 1.1em;
+        }
+        
+        .cliente-tipo {
+            background: var(--warning-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        
+        .cliente-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .cliente-field {
+            font-size: 0.85em;
+        }
+        
+        .cliente-field strong {
+            color: var(--primary-color);
+        }
+        
+        .cliente-descripcion {
+            background: var(--bg-color);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        
+        .cliente-tags {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .cliente-tag {
+            background: var(--info-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+        
+        .cliente-tag.presupuesto-bajo { background: #dc3545; }
+        .cliente-tag.presupuesto-medio { background: #ffc107; }
+        .cliente-tag.presupuesto-alto { background: #28a745; }
+        .cliente-tag.urgencia-baja { background: #6c757d; }
+        .cliente-tag.urgencia-media { background: #fd7e14; }
+        .cliente-tag.urgencia-alta { background: #dc3545; }
+        
+        .cliente-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+        
+        .cliente-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .editar-cliente-btn, .eliminar-cliente-btn {
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .editar-cliente-btn {
+            background: var(--info-color);
+            color: white;
+        }
+        
+        .eliminar-cliente-btn {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .cliente-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        /* Responsive para sistema de clientes potenciales */
+        @media (max-width: 768px) {
+            .section-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .cliente-info {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .cliente-header {
+                flex-direction: column;
+                gap: 5px;
+                align-items: flex-start;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .formulario-cliente {
+                padding: 15px;
+            }
+            
+            .cliente-potencial-card {
+                padding: 12px;
+            }
+            
+            .cliente-tags {
+                gap: 3px;
+            }
+            
+            .cliente-tag {
+                font-size: 0.65em;
+                padding: 1px 5px;
+            }
+            
+            .desarrollo-content {
+                padding: 25px 20px;
+                margin: 0 15px;
+            }
+            
+            .desarrollo-content h3 {
+                font-size: 1.2em;
+            }
+            
+            .desarrollo-icon {
+                font-size: 3em;
+                margin-bottom: 15px;
+            }
+            
+            .desarrollo-content p {
+                font-size: 0.9em;
+            }
+        }
+        
+        /* Responsive para nuevas secciones */
+        @media (max-width: 768px) {
+            .perfil-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .recursos-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .recurso-card {
+                padding: 15px;
+            }
+            
+            .recurso-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.3em;
+            }
+            
+            .recurso-info h4 {
+                font-size: 0.95em;
+            }
+            
+            .recurso-info p {
+                font-size: 0.85em;
+            }
+            
+            .cliente-ideal-container {
+                gap: 20px;
+            }
+            
+            .perfil-section {
+                padding: 15px;
+            }
+            
+            .recursos-container {
+                gap: 25px;
+            }
         }
         .loading::after { 
             content: ''; 
@@ -683,7 +2007,11 @@
             
             <!-- 🚦 SEMÁFORO DE CALIFICACIÓN -->
             <div class="panel">
-                <h2>🚦 Semáforo de Calificación</h2>
+                <h2>🚦 Proceso de Pre-Calificación</h2>
+                <div class="precalificacion-header">
+                    <p><strong>⚠️ IMPORTANTE:</strong> Completa esta pre-calificación antes de hacer cotización formal</p>
+                    <button class="proceso-btn" onclick="iniciarProceso()">🎯 Iniciar Proceso de Calificación</button>
+                </div>
                 <div class="semaforo-container">
                     <div class="semaforo-light verde" onclick="handleSemaforoClick('verde')">
                         <div class="semaforo-icon">🟢</div>
@@ -734,11 +2062,378 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 📋 PROCESO DE CALIFICACIÓN PASO A PASO -->
+            <div class="panel proceso-panel" id="procesoPanel" style="display: none;">
+                <h2>📋 Proceso de Calificación por Etapas</h2>
+                <div class="etapas-container">
+                    <div class="etapa" data-etapa="1">
+                        <div class="etapa-header">
+                            <span class="etapa-numero">1</span>
+                            <h3>🎬 Apertura & Rapport</h3>
+                            <span class="etapa-tiempo">2-3 min</span>
+                        </div>
+                        <div class="etapa-content">
+                            <div class="objetivo">
+                                <strong>Objetivo:</strong> Generar confianza y entender la situación general
+                            </div>
+                            <div class="preguntas-clave">
+                                <strong>Preguntas Clave:</strong>
+                                <ul>
+                                    <li>"¿Cómo nos conociste?"</li>
+                                    <li>"¿Qué te lleva a buscar publicidad en este momento?"</li>
+                                    <li>"¿Cuál es tu negocio/empresa?"</li>
+                                </ul>
+                            </div>
+                            <button class="usar-script-btn" onclick="irACategoria('bienvenida')">📝 Ver Scripts de Apertura</button>
+                        </div>
+                    </div>
+
+                    <div class="etapa" data-etapa="2">
+                        <div class="etapa-header">
+                            <span class="etapa-numero">2</span>
+                            <h3>🔍 Investigación & Necesidad</h3>
+                            <span class="etapa-tiempo">5-7 min</span>
+                        </div>
+                        <div class="etapa-content">
+                            <div class="objetivo">
+                                <strong>Objetivo:</strong> Entender el PORQUÉ real detrás de su necesidad
+                            </div>
+                            <div class="preguntas-clave">
+                                <strong>Preguntas OBLIGATORIAS:</strong>
+                                <ul>
+                                    <li>"¿Qué quieres lograr con esta publicidad?"</li>
+                                    <li>"¿Qué pasaría si no haces nada?"</li>
+                                    <li>"¿Para cuándo necesitas tenerlo?"</li>
+                                    <li>"¿Has cotizado con alguien más?"</li>
+                                </ul>
+                            </div>
+                            <div class="señales-alerta">
+                                <strong>🚨 Señales de Alerta:</strong>
+                                <span class="alerta">"Solo quiero precios"</span>
+                                <span class="alerta">"No tengo prisa"</span>
+                                <span class="alerta">"Para tener una idea"</span>
+                            </div>
+                            <button class="usar-script-btn" onclick="irACategoria('calificacion')">🔍 Ver Scripts de Investigación</button>
+                        </div>
+                    </div>
+
+                    <div class="etapa" data-etapa="3">
+                        <div class="etapa-header">
+                            <span class="etapa-numero">3</span>
+                            <h3>💰 Presupuesto & Decisión</h3>
+                            <span class="etapa-tiempo">3-5 min</span>
+                        </div>
+                        <div class="etapa-content">
+                            <div class="objetivo">
+                                <strong>Objetivo:</strong> Validar presupuesto real y proceso de decisión
+                            </div>
+                            <div class="preguntas-clave">
+                                <strong>Preguntas CRÍTICAS:</strong>
+                                <ul>
+                                    <li>"¿Tienes presupuesto definido para esto?"</li>
+                                    <li>"¿En qué rango estás pensando?"</li>
+                                    <li>"¿Eres tú quien autoriza la inversión?"</li>
+                                    <li>"¿Qué necesitas para tomar la decisión?"</li>
+                                </ul>
+                            </div>
+                            <div class="validacion-presupuesto">
+                                <strong>💡 Validación:</strong> "Para darte la mejor propuesta, nuestros proyectos van desde $X hasta $Y, ¿estás dentro de ese rango?"
+                            </div>
+                            <button class="usar-script-btn" onclick="irACategoria('calificacion')">💰 Ver Scripts de Presupuesto</button>
+                        </div>
+                    </div>
+
+                    <div class="etapa" data-etapa="4">
+                        <div class="etapa-header">
+                            <span class="etapa-numero">4</span>
+                            <h3>🎯 Evaluación & Próximos Pasos</h3>
+                            <span class="etapa-tiempo">2-3 min</span>
+                        </div>
+                        <div class="etapa-content">
+                            <div class="decision-matrix">
+                                <div class="decision-verde">
+                                    <strong>🟢 COTIZAR SI:</strong>
+                                    <ul>
+                                        <li>✅ Necesidad clara y urgente</li>
+                                        <li>✅ Presupuesto validado</li>
+                                        <li>✅ Decisor identificado</li>
+                                        <li>✅ Timeline definido</li>
+                                    </ul>
+                                    <button class="decision-btn verde" onclick="tomarDecision('verde')">🎯 Proceder a Cotización</button>
+                                </div>
+                                <div class="decision-amarillo">
+                                    <strong>🟡 INVESTIGAR MÁS SI:</strong>
+                                    <ul>
+                                        <li>⚠️ Información incompleta</li>
+                                        <li>⚠️ Presupuesto vago</li>
+                                        <li>⚠️ No es el decisor</li>
+                                    </ul>
+                                    <button class="decision-btn amarillo" onclick="tomarDecision('amarillo')">🔍 Programar Segunda Llamada</button>
+                                </div>
+                                <div class="decision-rojo">
+                                    <strong>🔴 PAUSAR SI:</strong>
+                                    <ul>
+                                        <li>❌ "Solo cotización"</li>
+                                        <li>❌ Sin presupuesto</li>
+                                        <li>❌ Sin urgencia</li>
+                                    </ul>
+                                    <button class="decision-btn rojo" onclick="tomarDecision('rojo')">⏸️ Pausar y Calificar Más</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="proceso-footer">
+                    <button class="cerrar-proceso-btn" onclick="cerrarProceso()">❌ Cerrar Proceso</button>
+                    <div class="tiempo-total">⏱️ Tiempo total estimado: 12-18 minutos</div>
+                </div>
+            </div>
             
             <div class="panel">
                 <div class="tabs" id="categoryTabs"></div>
                 <div class="tab-content" id="scriptsContainer">
                     <div class="loading">Cargando scripts...</div>
+                </div>
+            </div>
+
+            <!-- 👤 PERFIL DE CLIENTE IDEAL -->
+            <div class="panel">
+                <h2>👤 Base de Conocimiento de Clientes</h2>
+                <div class="cliente-ideal-container">
+                    <div class="perfil-section neutral">
+                        <div class="section-header">
+                            <h3>⚠️ Cliente POTENCIAL (Base de Conocimiento)</h3>
+                            <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Cliente Potencial</button>
+                        </div>
+                        <p class="section-description">
+                            <strong>💡 Propósito:</strong> Documenta clientes potenciales identificados por el equipo para análisis y aprendizaje conjunto.
+                        </p>
+                        
+                        <!-- Formulario para agregar/editar cliente -->
+                        <div class="formulario-cliente" id="formularioCliente" style="display: none;">
+                            <div class="form-header">
+                                <h4 id="tituloFormulario">➕ Agregar Nuevo Cliente Potencial</h4>
+                                <button class="cerrar-form-btn" onclick="cerrarFormularioCliente()">✖️</button>
+                            </div>
+                            <form id="clienteForm">
+                                <input type="hidden" id="clienteId" value="">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Nombre del Cliente/Empresa</label>
+                                        <input type="text" id="clienteNombre" required placeholder="Ej: Restaurante El Buen Sabor">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Tipo de Negocio</label>
+                                        <select id="clienteTipo" required>
+                                            <option value="">Seleccionar tipo</option>
+                                            <option value="restaurante">Restaurante/Bar</option>
+                                            <option value="retail">Tienda/Retail</option>
+                                            <option value="servicios">Servicios Profesionales</option>
+                                            <option value="clinica">Clínica/Consultorio</option>
+                                            <option value="empresa">Empresa/Corporativo</option>
+                                            <option value="otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Contacto</label>
+                                        <input type="text" id="clienteContacto" placeholder="Nombre del contacto">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Teléfono</label>
+                                        <input type="tel" id="clienteTelefono" placeholder="+504 1234-5678">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>¿Qué lo hace POTENCIAL? (Características observadas)</label>
+                                    <textarea id="clienteCaracteristicas" required placeholder="Ej: Negocio nuevo con 3 meses, tiene presupuesto pero limitado, está comparando varias opciones..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Necesidad Identificada</label>
+                                    <textarea id="clienteNecesidad" required placeholder="Ej: Necesita rótulo para fachada, mencionó que quiere algo 'no muy caro pero que se vea bien'..."></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Presupuesto Estimado</label>
+                                        <select id="clientePresupuesto">
+                                            <option value="">No especificado</option>
+                                            <option value="bajo">Bajo ($500 - $2,000)</option>
+                                            <option value="medio">Medio ($2,000 - $5,000)</option>
+                                            <option value="alto">Alto ($5,000+)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Urgencia</label>
+                                        <select id="clienteUrgencia">
+                                            <option value="">No especificada</option>
+                                            <option value="baja">Baja (Sin prisa)</option>
+                                            <option value="media">Media (1-2 meses)</option>
+                                            <option value="alta">Alta (Menos de 1 mes)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Próximos Pasos Sugeridos</label>
+                                    <textarea id="clienteProximosPasos" placeholder="Ej: Llamar en 2 semanas, enviar portfolio de trabajos similares, preguntar sobre timeline específico..."></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Vendedor que lo Identificó</label>
+                                        <input type="text" id="clienteVendedor" placeholder="Nombre del vendedor">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Fecha de Contacto</label>
+                                        <input type="date" id="clienteFecha">
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="guardar-cliente-btn">💾 Guardar Cliente</button>
+                                    <button type="button" class="cancelar-btn" onclick="cerrarFormularioCliente()">❌ Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Lista dinámica de clientes potenciales -->
+                        <div class="clientes-potenciales-lista" id="clientesPotencialesList">
+                            <div class="loading">Cargando clientes potenciales...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🛠️ RECURSOS Y HERRAMIENTAS -->
+            <div class="panel recursos-panel">
+                <h2>🛠️ Recursos y Herramientas</h2>
+                <div class="recursos-container">
+                    <div class="recursos-section">
+                        <h3>📊 Calculadoras y Precios</h3>
+                        <div class="recursos-grid">
+                            <div class="recurso-card calculadora">
+                                <div class="recurso-icon">🧮</div>
+                                <div class="recurso-info">
+                                    <h4>Calculadora de Precios</h4>
+                                    <p>Cálculo rápido de costos por m² y tipo de material</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                            <div class="recurso-card lista-precios">
+                                <div class="recurso-icon">💰</div>
+                                <div class="recurso-info">
+                                    <h4>Lista de Precios 2024</h4>
+                                    <p>Tarifario actualizado por producto y servicio</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                            <div class="recurso-card descuentos">
+                                <div class="recurso-icon">🎯</div>
+                                <div class="recurso-info">
+                                    <h4>Tabla de Descuentos</h4>
+                                    <p>Descuentos por volumen y tipo de cliente</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recursos-section">
+                        <h3>📋 Documentos y Templates</h3>
+                        <div class="recursos-grid">
+                            <div class="recurso-card cotizacion">
+                                <div class="recurso-icon">📄</div>
+                                <div class="recurso-info">
+                                    <h4>Template de Cotización</h4>
+                                    <p>Formato estándar para propuestas comerciales</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                            <div class="recurso-card contrato">
+                                <div class="recurso-icon">📝</div>
+                                <div class="recurso-info">
+                                    <h4>Contrato Tipo</h4>
+                                    <p>Modelo de contrato con términos y condiciones</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                            <div class="recurso-card portfolio">
+                                <div class="recurso-icon">🎨</div>
+                                <div class="recurso-info">
+                                    <h4>Portfolio Digital</h4>
+                                    <p>Galería de trabajos recientes por categoría</p>
+                                </div>
+                                <div class="recurso-arrow">→</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recursos-section">
+                        <h3>🔗 Enlaces Útiles</h3>
+                        <div class="recursos-grid">
+                            <div class="recurso-card whatsapp">
+                                <div class="recurso-icon">📱</div>
+                                <div class="recurso-info">
+                                    <h4>WhatsApp Business</h4>
+                                    <p>Línea principal para clientes</p>
+                                </div>
+                                <div class="recurso-arrow">↗</div>
+                            </div>
+                            <div class="recurso-card drive">
+                                <div class="recurso-icon">☁️</div>
+                                <div class="recurso-info">
+                                    <h4>Drive Compartido</h4>
+                                    <p>Archivos y recursos del equipo de ventas</p>
+                                </div>
+                                <div class="recurso-arrow">↗</div>
+                            </div>
+                            <div class="recurso-card catalogo">
+                                <div class="recurso-icon">📚</div>
+                                <div class="recurso-info">
+                                    <h4>Catálogo Digital</h4>
+                                    <p>Productos y servicios con especificaciones</p>
+                                </div>
+                                <div class="recurso-arrow">↗</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recursos-section">
+                        <h3>📞 Contactos Importantes</h3>
+                        <div class="recursos-grid">
+                            <div class="recurso-card contacto">
+                                <div class="recurso-icon">👨‍💼</div>
+                                <div class="recurso-info">
+                                    <h4>Gerencia Comercial</h4>
+                                    <p>+504 1234-5678 | gerencia@dpi.com</p>
+                                </div>
+                            </div>
+                            <div class="recurso-card contacto">
+                                <div class="recurso-icon">🏭</div>
+                                <div class="recurso-info">
+                                    <h4>Producción</h4>
+                                    <p>+504 8765-4321 | produccion@dpi.com</p>
+                                </div>
+                            </div>
+                            <div class="recurso-card contacto">
+                                <div class="recurso-icon">🚚</div>
+                                <div class="recurso-info">
+                                    <h4>Instalaciones</h4>
+                                    <p>+504 9999-1111 | instalacion@dpi.com</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Overlay de "En desarrollo" -->
+                <div class="desarrollo-overlay">
+                    <div class="desarrollo-content">
+                        <div class="desarrollo-icon">🚧</div>
+                        <h3>Sección en Desarrollo</h3>
+                        <p>Los recursos y herramientas estarán disponibles próximamente.</p>
+                        <p class="desarrollo-subtitle">Mientras tanto, puedes usar el sistema de scripts y calificación de clientes.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -757,6 +2452,8 @@
         let isAuthenticated = false;
         let debounceTimer = null; // ✅ Inicialización corregida
         let connectionInterval = null; // ✅ Para poder limpiar el intervalo
+        let CLIENTES_POTENCIALES = []; // ✅ Array para clientes potenciales
+        let currentEditingClienteId = null; // ✅ Para edición de clientes
 
         // ✅ FUNCIÓN DE ALERTAS MEJORADA
         function showAlert(message, type = 'success', containerId = 'alertContainer') {
@@ -1663,7 +3360,7 @@ Tamaño: ${(file.size / 1024).toFixed(2)} KB
             return categoryNames[category] || category;
         }
         
-        // ✅ MANEJO DEL SEMÁFORO DE CALIFICACIÓN
+        // ✅ MANEJO DEL SEMÁFORO DE CALIFICACIÓN MEJORADO
         function handleSemaforoClick(color) {
             const categoryMap = {
                 'verde': 'cierre',      // Cliente listo → Scripts de cierre
@@ -1673,34 +3370,40 @@ Tamaño: ${(file.size / 1024).toFixed(2)} KB
             
             const targetCategory = categoryMap[color];
             
-            // Mostrar feedback visual
+            // Mensajes más específicos con recomendaciones
             const messages = {
-                'verde': '🟢 Cliente LISTO para cotizar → Ir a scripts de CIERRE',
-                'amarillo': '🟡 Cliente necesita INVESTIGACIÓN → Ir a scripts de CALIFICACIÓN', 
-                'rojo': '🔴 Cliente PROBLEMÁTICO → Usar scripts básicos de BIENVENIDA'
+                'verde': '🟢 Cliente CALIFICADO → Procede a cotizar. Te llevo a scripts de CIERRE.',
+                'amarillo': '🟡 Cliente PARCIALMENTE calificado → Necesita más investigación. Te llevo a scripts de CALIFICACIÓN.', 
+                'rojo': '🔴 Cliente NO calificado → Alto riesgo. Te llevo a scripts básicos de BIENVENIDA.'
             };
             
-            showAlert(messages[color], 'success');
+            showAlert(messages[color], color === 'verde' ? 'success' : 'error');
             
-            // Navegar a la categoría correspondiente después de un pequeño delay
-            setTimeout(() => {
-                const tabs = Array.from(document.querySelectorAll('.tab'));
-                const targetTab = tabs.find(tab => {
-                    const tabText = tab.textContent.toLowerCase();
-                    return tabText.includes(targetCategory);
-                });
-                
-                if (targetTab) {
-                    showTab(targetCategory, targetTab);
+            // Preguntar si quiere usar el proceso completo
+            const useProcess = confirm(`${messages[color]}\n\n¿Prefieres usar el PROCESO COMPLETO de calificación paso a paso?`);
+            
+            if (useProcess) {
+                iniciarProceso();
+            } else {
+                // Navegar directamente a la categoría
+                setTimeout(() => {
+                    const tabs = Array.from(document.querySelectorAll('.tab'));
+                    const targetTab = tabs.find(tab => {
+                        const tabText = tab.textContent.toLowerCase();
+                        return tabText.includes(targetCategory);
+                    });
                     
-                    // Scroll suave hacia los scripts
-                    setTimeout(() => {
-                        document.getElementById('categoryTabs').scrollIntoView({ 
-                            behavior: 'smooth' 
-                        });
-                    }, 100);
-                }
-            }, 1500);
+                    if (targetTab) {
+                        showTab(targetCategory, targetTab);
+                        
+                        setTimeout(() => {
+                            document.getElementById('categoryTabs').scrollIntoView({ 
+                                behavior: 'smooth' 
+                            });
+                        }, 100);
+                    }
+                }, 1000);
+            }
         }
         function scrollToScript(id) {
             const searchResults = document.getElementById('searchResults');
