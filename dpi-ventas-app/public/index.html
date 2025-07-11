@@ -565,6 +565,133 @@
             display: none;
         }
         
+        /* MODAL DE AUTENTICACIÓN */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .auth-modal {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .auth-overlay.active .auth-modal {
+            transform: translateY(0);
+        }
+        
+        .auth-header {
+            margin-bottom: 30px;
+        }
+        
+        .auth-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+        
+        .auth-header p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .auth-form {
+            margin-bottom: 20px;
+        }
+        
+        .auth-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .auth-input:focus {
+            outline: none;
+            border-color: #0FA795;
+            box-shadow: 0 0 0 3px rgba(15, 167, 149, 0.1);
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .auth-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+        
+        .auth-btn.primary {
+            background: #0FA795;
+            color: white;
+        }
+        
+        .auth-btn.primary:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+        }
+        
+        .auth-btn.secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e1e5e9;
+        }
+        
+        .auth-btn.secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .auth-error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .content-blurred {
+            filter: blur(5px);
+            pointer-events: none;
+            transition: filter 0.3s ease;
+        }
+        
         @media (max-width: 1200px) {
             .admin-controls {
                 grid-template-columns: 1fr;
@@ -598,7 +725,47 @@
 <body>
     <div class="connection-status" id="connectionStatus">🔴 Conectando...</div>
     
-    <div class="container">
+    <!-- MODAL DE AUTENTICACIÓN -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-modal">
+            <div class="auth-header">
+                <h2>🔐 Acceso Administrativo</h2>
+                <p>Ingresa las credenciales para acceder al panel de administración</p>
+            </div>
+            
+            <div class="auth-error" id="authError">
+                ❌ Credenciales incorrectas. Inténtalo de nuevo.
+            </div>
+            
+            <form class="auth-form" id="authForm">
+                <input 
+                    type="text" 
+                    class="auth-input" 
+                    id="authUsername" 
+                    placeholder="👤 Usuario"
+                    required
+                >
+                <input 
+                    type="password" 
+                    class="auth-input" 
+                    id="authPassword" 
+                    placeholder="🔑 Contraseña"
+                    required
+                >
+                
+                <div class="auth-buttons">
+                    <button type="button" class="auth-btn secondary" onclick="cancelAuth()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="auth-btn primary">
+                        🚀 Ingresar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="container" id="mainContent">
         <div class="header">
             <h1>🎯 DPI PUBLICIDAD - Sistema Railway</h1>
             <p>Rotulos • Material POP • Stands • Banners • Viniles</p>
@@ -760,9 +927,105 @@ Variables: [NOMBRE], [PROYECTO], etc.
         let currentEditingId = null;
         let connectionRetries = 0;
         let maxRetries = 3;
+        let isAuthenticated = false;
         
         // Configuración de API
         const API_BASE = window.location.origin + '/api';
+
+        // Funciones de autenticación
+        function showAuthModal() {
+            const overlay = document.getElementById('authOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            overlay.classList.add('active');
+            mainContent.classList.add('content-blurred');
+            
+            // Focus en el campo de usuario
+            setTimeout(() => {
+                document.getElementById('authUsername').focus();
+            }, 300);
+        }
+
+        function hideAuthModal() {
+            const overlay = document.getElementById('authOverlay');
+            const mainContent = document.getElementById('mainContent');
+            const error = document.getElementById('authError');
+            
+            overlay.classList.remove('active');
+            mainContent.classList.remove('content-blurred');
+            error.style.display = 'none';
+            
+            // Limpiar campos
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+        }
+
+        function showAuthError() {
+            const error = document.getElementById('authError');
+            error.style.display = 'block';
+            
+            // Shake animation
+            error.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+                error.style.animation = '';
+            }, 500);
+        }
+
+        function cancelAuth() {
+            hideAuthModal();
+            // Volver a modo ventas
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            buttons[0].classList.add('active');
+        }
+
+        // Manejar envío del formulario de autenticación
+        document.addEventListener('DOMContentLoaded', function() {
+            const authForm = document.getElementById('authForm');
+            authForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('authUsername').value;
+                const password = document.getElementById('authPassword').value;
+                
+                // Validar credenciales (puedes cambiar estas)
+                if (username === 'admin' && password === 'DPI2025Admin') {
+                    isAuthenticated = true;
+                    hideAuthModal();
+                    
+                    // Activar modo admin
+                    const ventasMode = document.getElementById('ventasMode');
+                    const adminMode = document.getElementById('adminMode');
+                    const buttons = document.querySelectorAll('.mode-btn');
+                    
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    ventasMode.classList.add('hidden');
+                    adminMode.classList.add('visible');
+                    buttons[1].classList.add('active');
+                    
+                    loadAdminData();
+                    
+                    // Mostrar mensaje de éxito
+                    showAlert('✅ Acceso administrativo concedido', 'success');
+                } else {
+                    showAuthError();
+                }
+            });
+        });
+
+        // Agregar animación shake para errores
+        const shakeKeyframes = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+            }
+        `;
+        
+        // Insertar keyframes en el documento
+        const style = document.createElement('style');
+        style.textContent = shakeKeyframes;
+        document.head.appendChild(style);
 
         // Estado de conexión
         function updateConnectionStatus(online) {
@@ -808,6 +1071,11 @@ Variables: [NOMBRE], [PROYECTO], etc.
         }
 
         async function saveScriptToAPI(scriptData) {
+            if (!isAuthenticated) {
+                showAlert('❌ No tienes permisos para realizar esta acción', 'error');
+                return;
+            }
+            
             try {
                 const url = currentEditingId ? 
                     `${API_BASE}/scripts/${currentEditingId}` : 
@@ -841,6 +1109,11 @@ Variables: [NOMBRE], [PROYECTO], etc.
         }
 
         async function deleteScriptFromAPI(id) {
+            if (!isAuthenticated) {
+                showAlert('❌ No tienes permisos para realizar esta acción', 'error');
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE}/scripts/${id}`, {
                     method: 'DELETE',
@@ -885,22 +1158,14 @@ Variables: [NOMBRE], [PROYECTO], etc.
             buttons.forEach(btn => btn.classList.remove('active'));
             
             if (mode === 'ventas') {
+                isAuthenticated = false; // Reset auth al salir de admin
                 ventasMode.classList.remove('hidden');
                 adminMode.classList.remove('visible');
                 buttons[0].classList.add('active');
                 loadScripts();
             } else {
-                // Protección para modo admin
-                const password = prompt('🔒 Contraseña de administrador:');
-                if (password === 'DPI2025Admin') {
-                    ventasMode.classList.add('hidden');
-                    adminMode.classList.add('visible');
-                    buttons[1].classList.add('active');
-                    loadAdminData();
-                } else if (password !== null) {
-                    alert('❌ Contraseña incorrecta. Acceso denegado.');
-                    buttons[0].classList.add('active'); // Mantener en modo ventas
-                }
+                // Mostrar modal de autenticación
+                showAuthModal();
             }
         }
 
