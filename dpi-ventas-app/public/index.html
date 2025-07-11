@@ -32,7 +32,6 @@
         .search-box { position: relative; }
         .search-input { width: 100%; padding: 12px 45px 12px 15px; border: 2px solid var(--border-color); border-radius: 25px; font-size: 14px; }
         .search-input:focus { outline: none; border-color: var(--primary-color); }
-        .search-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #6c757d; }
         .search-results { position: absolute; top: 105%; left: 0; right: 0; background: var(--white-color); border: 1px solid var(--border-color); border-radius: 8px; max-height: 400px; overflow-y: auto; z-index: 200; display: none; }
         .search-results.active { display: block; }
         .search-result-item { padding: 12px 15px; border-bottom: 1px solid #f1f3f4; cursor: pointer; }
@@ -87,6 +86,9 @@
         .connection-status.online { background: #d4edda; color: #155724; }
         .connection-status.offline { background: #f8d7da; color: #721c24; }
         .hidden { display: none; }
+        .alert { padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; }
+        .alert.success { background: #d4edda; color: #155724; }
+        .alert.error { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
@@ -164,13 +166,14 @@
     </div>
 
     <script>
+        // --- GLOBAL VARIABLES ---
         const API_BASE_URL = '';
         let SCRIPTS_DATA = {};
         let currentEditingId = null;
         let isAuthenticated = false;
         let debounceTimer;
 
-        // --- CORE & API ---
+        // --- CORE & API FUNCTIONS ---
         function showAlert(message, type = 'success') {
             const container = document.getElementById('alertContainer');
             if (!container) return;
@@ -189,10 +192,7 @@
                     const errorData = await response.json().catch(() => ({error: 'Error de servidor'}));
                     throw new Error(errorData.error || `Error HTTP: ${response.status}`);
                 }
-                if (response.headers.get("content-type")?.includes("application/json")) {
-                    return response.json();
-                }
-                return response.blob(); // Para backups
+                return response.headers.get("content-type")?.includes("application/json") ? response.json() : response.blob();
             } catch (error) {
                 updateConnectionStatus(false);
                 console.error(`API call a ${endpoint} falló:`, error);
@@ -210,9 +210,10 @@
             }
             if (headerStatus) {
                 headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
+                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
             }
         }
-
+        
         async function fetchAllData() {
             const container = document.getElementById('scriptsContainer');
             if (container) container.innerHTML = '<div class="loading"></div>';
@@ -222,7 +223,7 @@
                 renderVentasUI();
                 updateSystemStatus();
             } catch (error) {
-                if(container) container.innerHTML = `<div class="error-message">Fallo al cargar scripts.</div>`;
+                if(container) container.innerHTML = `<div class="error-message">No se pudieron cargar los scripts.</div>`;
             }
         }
         
@@ -236,7 +237,8 @@
             }
         }
         function hideAuthModal() {
-            document.getElementById('authOverlay').classList.remove('active');
+            const overlay = document.getElementById('authOverlay');
+            if (overlay) overlay.classList.remove('active');
             document.getElementById('mainContent').style.filter = 'none';
         }
         function cancelAuth() {
@@ -245,21 +247,34 @@
             buttons[0].classList.add('active');
             buttons[1].classList.remove('active');
         }
-        
+        function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('authUsername').value;
+            const password = document.getElementById('authPassword').value;
+            const errorEl = document.getElementById('authError');
+            if (username === 'admin' && password === 'DPI2025Admin') {
+                isAuthenticated = true;
+                hideAuthModal();
+                switchMode('admin', true);
+            } else {
+                if (errorEl) errorEl.style.display = 'block';
+            }
+        }
+
         // --- UI & MODE MANAGEMENT ---
         function switchMode(mode, fromAuth = false) {
             const ventasMode = document.getElementById('ventasMode');
             const adminMode = document.getElementById('adminMode');
             const modeButtons = document.querySelectorAll('.mode-btn');
 
-            if (mode === 'admin' && !fromAuth) {
-                showAuthModal(); return;
-            }
+            if (mode === 'admin' && !fromAuth) { showAuthModal(); return; }
+            
             modeButtons.forEach(btn => btn.classList.remove('active'));
             if (mode === 'ventas') {
                 ventasMode.style.display = 'block';
                 adminMode.style.display = 'none';
                 modeButtons[0].classList.add('active');
+                fetchAllData();
             } else {
                 ventasMode.style.display = 'none';
                 adminMode.style.display = 'block';
@@ -272,18 +287,22 @@
             const tabsContainer = document.getElementById('categoryTabs');
             const scriptsContainer = document.getElementById('scriptsContainer');
             if (!tabsContainer || !scriptsContainer) return;
+
             tabsContainer.innerHTML = '';
             scriptsContainer.innerHTML = '';
             const categoryNames = {bienvenida: "💬 Bienvenida", calificacion: "🔍 Calificación", objeciones: "🛡️ Objeciones", seguimiento: "📞 Seguimiento", cierre: "🎯 Cierre"};
+            
             Object.keys(categoryNames).forEach((category, index) => {
                 const tab = document.createElement('button');
                 tab.className = `tab ${index === 0 ? 'active' : ''}`;
                 tab.textContent = categoryNames[category];
                 tab.onclick = (e) => showTab(category, e.target);
                 tabsContainer.appendChild(tab);
+                
                 const section = document.createElement('div');
                 section.id = category;
                 section.className = `tab-section ${index > 0 ? 'hidden' : ''}`;
+                
                 if(SCRIPTS_DATA[category] && SCRIPTS_DATA[category].length > 0) {
                     section.innerHTML = SCRIPTS_DATA[category].map(createScriptCardHTML).join('');
                 } else {
@@ -313,7 +332,10 @@
 
         function updateSystemStatus() {
             const totalCount = SCRIPTS_DATA ? Object.values(SCRIPTS_DATA).reduce((sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0), 0) : 0;
-            document.getElementById('systemStatus').textContent = `✅ Sistema activo - ${totalCount} scripts disponibles - Actualizado: ${new Date().toLocaleTimeString()}`;
+            const statusEl = document.getElementById('systemStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles - Actualizado: ${new Date().toLocaleTimeString()}`;
+            }
         }
         
         async function copyAndTrack(scriptId) {
@@ -466,8 +488,8 @@
                 const formData = new FormData();
                 formData.append('backup', file);
                 try {
-                    await apiCall('/api/restore', { method: 'POST', headers: { 'Authorization': 'Bearer DPI2025Admin' }, body: formData });
-                    showAlert('Restauración completa. Reiniciando servidor...', 'success');
+                    const result = await apiCall('/api/restore', { method: 'POST', headers: { 'Authorization': 'Bearer DPI2025Admin' }, body: formData });
+                    showAlert(result.message, 'success');
                     setTimeout(() => location.reload(), 2000);
                 } catch(e) {}
             }
@@ -516,7 +538,10 @@
                     debounceTimer = setTimeout(() => {
                         const query = e.target.value.trim();
                         if (query.length > 1) performSearch(query);
-                        else document.getElementById('searchResults').classList.remove('active');
+                        else {
+                            const searchResults = document.getElementById('searchResults');
+                            if(searchResults) searchResults.classList.remove('active');
+                        }
                     }, 300);
                 });
             }
@@ -530,7 +555,6 @@
             fetchAllData();
             setInterval(() => updateConnectionStatus(navigator.onLine), 10000);
         });
-
     </script>
 </body>
 </html>
