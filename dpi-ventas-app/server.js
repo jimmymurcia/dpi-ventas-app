@@ -84,8 +84,6 @@ function requireAuth(req, res, next) {
 }
 
 // --- API ENDPOINTS ---
-
-// GET all scripts with analytics data
 app.get('/api/scripts', (req, res) => {
     const query = `
         SELECT s.*,
@@ -117,7 +115,6 @@ app.get('/api/scripts', (req, res) => {
     });
 });
 
-// POST to track script usage
 app.post('/api/scripts/:id/track', (req, res) => {
     db.run('INSERT INTO script_usage (script_id) VALUES (?)', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -125,7 +122,6 @@ app.post('/api/scripts/:id/track', (req, res) => {
     });
 });
 
-// GET search results
 app.get('/api/scripts/search', (req, res) => {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: 'Query de búsqueda es requerida' });
@@ -142,7 +138,6 @@ app.get('/api/scripts/search', (req, res) => {
     });
 });
 
-// GET analytics dashboard data (protected)
 app.get('/api/analytics', requireAuth, (req, res) => {
     const queries = {
         topScripts: `SELECT s.title, COUNT(u.id) as uses_30_days FROM script_usage u JOIN scripts s ON s.id = u.script_id WHERE u.timestamp >= date('now', '-30 days') GROUP BY s.id ORDER BY uses_30_days DESC LIMIT 5`,
@@ -158,7 +153,6 @@ app.get('/api/analytics', requireAuth, (req, res) => {
     });
 });
 
-// --- CRUD Endpoints (Protected) ---
 app.post('/api/scripts', requireAuth, (req, res) => {
     const { category, title, text } = req.body;
     db.run('INSERT INTO scripts (category, title, text) VALUES (?, ?, ?)', [category, title, text], function(err) {
@@ -182,7 +176,6 @@ app.delete('/api/scripts/:id', requireAuth, (req, res) => {
     });
 });
 
-// --- Backup & Restore (Protected) ---
 const upload = multer({ dest: 'uploads/' });
 app.get('/api/backup', requireAuth, (req, res) => {
     res.download(dbPath, `backup-${Date.now()}.db`);
@@ -196,26 +189,17 @@ app.post('/api/restore', requireAuth, upload.single('backup'), (req, res) => {
             if (err) return res.status(500).json({error: "Error al restaurar"});
             res.json({ message: 'Restauración exitosa. El servidor debe reiniciarse.' });
             console.log('✅ Base de datos restaurada. Por favor, reinicia el servidor.');
-            process.exit(1);
+            process.exit(0);
         });
     });
 });
 
-// --- SERVE FRONTEND ---
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- SERVER START ---
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor DPI ejecutándose en http://localhost:${PORT}`);
 });
 
-process.on('SIGINT', () => {
-    console.log('\n🔄 Cerrando servidor...');
-    db.close((err) => {
-        if (err) console.error('Error al cerrar base de datos:', err.message);
-        else console.log('✅ Base de datos cerrada.');
-        process.exit(0);
-    });
-});
+process.on('SIGINT', () => db.close(() => process.exit(0)));
