@@ -55,7 +55,7 @@
         .form-group select, .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 1em; }
         .form-group textarea { height: 150px; resize: vertical; }
         .form-group select:focus, .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(15, 167, 149, 0.1); }
-        .admin-btn { padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; border: none; transition: all 0.2s ease; }
+        .admin-btn { padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; border: none; transition: all 0.2s ease; margin-right: 10px;}
         .admin-btn.success { background-color: var(--success-color); color: white; }
         .admin-btn.danger { background-color: var(--danger-color); color: white; }
         .scripts-list { max-height: 500px; overflow-y: auto; }
@@ -104,7 +104,15 @@
         </div>
         <div class="ventas-mode" id="ventasMode">
             <div class="panel">
-                <div class="tabs" id="categoryTabs"><div class="loading"></div></div>
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar scripts..." autocomplete="off">
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="tabs" id="categoryTabs"></div>
                 <div class="tab-content" id="scriptsContainer"><div class="loading"></div></div>
             </div>
         </div>
@@ -136,6 +144,7 @@
         let SCRIPTS_DATA = {};
         let currentEditingId = null;
         let isAuthenticated = false;
+        let debounceTimer;
 
         // --- CORE & API FUNCTIONS ---
         function showAlert(message, type = 'success', containerId = 'alertContainer') {
@@ -156,11 +165,12 @@
                     const errorData = await response.json().catch(() => ({error: 'Error de servidor'}));
                     throw new Error(errorData.error || `Error HTTP: ${response.status}`);
                 }
-                return response.headers.get("content-type")?.includes("application/json") ? response.json() : response.blob();
+                const contentType = response.headers.get("content-type");
+                return contentType?.includes("application/json") ? response.json() : response.blob();
             } catch (error) {
                 updateConnectionStatus(false);
                 console.error(`API call a ${endpoint} falló:`, error);
-                showAlert(`Error de Red: ${error.message}`, 'error', 'mainContent');
+                showAlert(`Error de Red: ${error.message}`, 'error');
                 throw error;
             }
         }
@@ -174,45 +184,52 @@
                 renderVentasUI();
                 updateSystemStatus();
             } catch (error) {
-                if(container) container.innerHTML = `<div class="error-message">Fallo al cargar scripts.</div>`;
+                if(container) container.innerHTML `<div class="error-message">Fallo al cargar scripts.</div>`;
             }
         }
         
-        // --- AUTHENTICATION ---
-        function showAuthModal() {
-            const overlay = document.getElementById('authOverlay');
-            if (overlay) {
-                overlay.classList.add('active');
-                document.getElementById('mainContent').style.filter = 'blur(5px)';
-                setTimeout(() => document.getElementById('authUsername').focus(), 100);
+        // --- UI & MODE MANAGEMENT ---
+        function updateConnectionStatus(isOnline) {
+            const el = document.getElementById('connectionStatus');
+            const headerStatus = document.getElementById('systemStatus');
+            if (el) {
+                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
+                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+            }
+            if (headerStatus) {
+                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
+                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
             }
         }
-        function hideAuthModal() {
-            const overlay = document.getElementById('authOverlay');
-            if (overlay) overlay.classList.remove('active');
-            document.getElementById('mainContent').style.filter = 'none';
-        }
-        function cancelAuth() {
-            hideAuthModal();
-            const buttons = document.querySelectorAll('.mode-btn');
-            buttons[0].classList.add('active');
-            buttons[1].classList.remove('active');
-        }
+        
         function handleAuth(e) {
             e.preventDefault();
             const username = document.getElementById('authUsername').value;
             const password = document.getElementById('authPassword').value;
-            const errorEl = document.getElementById('authError');
             if (username === 'admin' && password === 'DPI2025Admin') {
                 isAuthenticated = true;
-                hideAuthModal();
+                document.getElementById('authOverlay').classList.remove('active');
+                document.getElementById('mainContent').style.filter = 'none';
                 switchMode('admin', true);
             } else {
-                if (errorEl) errorEl.style.display = 'block';
+                document.getElementById('authError').style.display = 'block';
             }
         }
+        
+        function cancelAuth() {
+            document.getElementById('authOverlay').classList.remove('active');
+            document.getElementById('mainContent').style.filter = 'none';
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        }
 
-        // --- UI & MODE MANAGEMENT ---
+        function showAuthModal() {
+            document.getElementById('authOverlay').classList.add('active');
+            document.getElementById('mainContent').style.filter = 'blur(5px)';
+            setTimeout(() => document.getElementById('authUsername').focus(), 100);
+        }
+
         function switchMode(mode, fromAuth = false) {
             const ventasMode = document.getElementById('ventasMode');
             const adminMode = document.getElementById('adminMode');
@@ -252,7 +269,7 @@
                 if(SCRIPTS_DATA[category] && SCRIPTS_DATA[category].length > 0) {
                     section.innerHTML = SCRIPTS_DATA[category].map(createScriptCardHTML).join('');
                 } else {
-                    section.innerHTML = `<div class="empty-state">No hay scripts en esta categoría.</div>`;
+                    section.innerHTML `<div class="empty-state">No hay scripts en esta categoría.</div>`;
                 }
                 scriptsContainer.appendChild(section);
             });
@@ -281,19 +298,6 @@
             const statusEl = document.getElementById('systemStatus');
             if (statusEl) {
                 statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles - Actualizado: ${new Date().toLocaleTimeString()}`;
-            }
-        }
-
-        function updateConnectionStatus(isOnline) {
-            const el = document.getElementById('connectionStatus');
-            const headerStatus = document.getElementById('systemStatus');
-            if (el) {
-                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
-                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-            }
-            if (headerStatus) {
-                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
-                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
             }
         }
         
@@ -422,16 +426,6 @@
             document.getElementById('dbStatus').textContent = '✅';
         }
         
-        async function loadScriptsListAdmin() {
-            const listContainer = document.getElementById('scriptsList');
-            if (!listContainer) return;
-            listContainer.innerHTML = '<div class="loading"></div>';
-            populateCategorySelect('scriptCategory');
-            populateCategorySelect('filterCategory');
-            await fetchAllData();
-            renderAdminList();
-        }
-
         async function downloadBackup() {
             try {
                 const blob = await apiCall('/api/backup', { headers: { 'Authorization': 'Bearer DPI2025Admin' } });
@@ -489,7 +483,6 @@
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Attach event listeners after the DOM is fully loaded
             document.getElementById('authForm').addEventListener('submit', handleAuth);
             
             const searchInput = document.getElementById('searchInput');
@@ -499,7 +492,10 @@
                     debounceTimer = setTimeout(() => {
                         const query = e.target.value.trim();
                         if (query.length > 1) performSearch(query);
-                        else document.getElementById('searchResults').classList.remove('active');
+                        else {
+                            const searchResults = document.getElementById('searchResults');
+                            if(searchResults) searchResults.classList.remove('active');
+                        }
                     }, 300);
                 });
             }
@@ -508,7 +504,7 @@
                 const searchBox = e.target.closest('.search-box');
                 if (!searchBox) {
                     const searchResults = document.getElementById('searchResults');
-                    if(searchResults) searchResults.classList.remove('active');
+                    if (searchResults) searchResults.classList.remove('active');
                 }
             });
 
