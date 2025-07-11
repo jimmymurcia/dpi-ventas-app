@@ -819,6 +819,7 @@ Variables: [NOMBRE], [PROYECTO], etc.
                     method: method,
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': 'Bearer DPI2025Admin' // Agregar autenticación
                     },
                     body: JSON.stringify(scriptData)
                 });
@@ -842,7 +843,10 @@ Variables: [NOMBRE], [PROYECTO], etc.
         async function deleteScriptFromAPI(id) {
             try {
                 const response = await fetch(`${API_BASE}/scripts/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer DPI2025Admin' // Agregar autenticación
+                    }
                 });
 
                 if (!response.ok) {
@@ -886,10 +890,17 @@ Variables: [NOMBRE], [PROYECTO], etc.
                 buttons[0].classList.add('active');
                 loadScripts();
             } else {
-                ventasMode.classList.add('hidden');
-                adminMode.classList.add('visible');
-                buttons[1].classList.add('active');
-                loadAdminData();
+                // Protección para modo admin
+                const password = prompt('🔒 Contraseña de administrador:');
+                if (password === 'DPI2025Admin') {
+                    ventasMode.classList.add('hidden');
+                    adminMode.classList.add('visible');
+                    buttons[1].classList.add('active');
+                    loadAdminData();
+                } else if (password !== null) {
+                    alert('❌ Contraseña incorrecta. Acceso denegado.');
+                    buttons[0].classList.add('active'); // Mantener en modo ventas
+                }
             }
         }
 
