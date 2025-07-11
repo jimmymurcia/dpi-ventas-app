@@ -1443,8 +1443,8 @@
 
         <div class="mode-switcher-wrapper">
             <div class="mode-switcher">
-                <button class="mode-btn active" onclick="switchMode('ventas')">📱 Modo Ventas</button>
-                <button class="mode-btn" onclick="switchMode('admin')">⚙️ Modo Admin</button>
+                <button class="mode-btn active" onclick="switchMode('ventas')" id="ventasModeBtn">📱 Modo Ventas</button>
+                <button class="mode-btn" onclick="switchMode('admin')" id="adminModeBtn">⚙️ Modo Admin</button>
             </div>
         </div>
 
@@ -1718,9 +1718,10 @@
                             </div>
                             
                             <div class="bulk-actions">
-                                <button class="bulk-btn export" onclick="exportarPerfiles()">📊 Exportar</button>
-                                <button class="bulk-btn share" onclick="compartirPerfiles()">📤 Compartir</button>
-                                <button class="bulk-btn" onclick="mostrarEstadisticas()">📈 Estadísticas</button>
+                                <button class="bulk-btn export" onclick="exportarPerfiles()" title="Exportar CSV para Excel">📊 CSV</button>
+                                <button class="bulk-btn" onclick="exportarJSON()" title="Respaldo completo en JSON">💾 Backup</button>
+                                <button class="bulk-btn share" onclick="compartirPerfiles()" title="Compartir perfiles">📤 Compartir</button>
+                                <button class="bulk-btn" onclick="mostrarEstadisticas()" title="Ver estadísticas">📈 Stats</button>
                             </div>
                         </div>
                         
@@ -1833,7 +1834,9 @@
 
     <script>
         // ✅ CONFIGURACIÓN
-        const API_BASE_URL = 'https://scripts-ventas-dpi.up.railway.app';
+        // Modo Local: deja vacío para guardar en navegador
+        // Modo Servidor: usa tu URL de Railway para datos compartidos
+        const API_BASE_URL = 'https://scripts-ventas-dpi.up.railway.app'; // Modo servidor activado
         
         let SCRIPTS_DATA = {};
         let currentEditingId = null;
@@ -1932,11 +1935,30 @@
         // ✅ CARGA DE CLIENTES POTENCIALES
         async function cargarClientesPotenciales() {
             try {
+                // Si no hay servidor, usar localStorage como fallback
+                if (!API_BASE_URL) {
+                    const localData = localStorage.getItem('dpi_clientes_potenciales');
+                    CLIENTES_POTENCIALES = localData ? JSON.parse(localData) : [];
+                    renderClientesPotenciales();
+                    showAlert('💾 Datos cargados desde almacenamiento local', 'success');
+                    return;
+                }
+                
                 const data = await apiCall('/api/clientes-potenciales');
                 CLIENTES_POTENCIALES = data;
                 renderClientesPotenciales();
             } catch (error) {
                 console.error('Error al cargar perfiles de clientes ideales:', error);
+                
+                // Fallback a localStorage si falla el servidor
+                const localData = localStorage.getItem('dpi_clientes_potenciales');
+                if (localData) {
+                    CLIENTES_POTENCIALES = JSON.parse(localData);
+                    renderClientesPotenciales();
+                    showAlert('⚠️ Servidor no disponible. Usando datos locales.', 'error');
+                    return;
+                }
+                
                 const container = document.getElementById('clientesPotencialesList');
                 if (container) {
                     container.innerHTML = `
@@ -1949,13 +1971,24 @@
                 }
             }
         }
+
+        // ✅ GUARDAR EN LOCALSTORAGE
+        function guardarEnLocal() {
+            if (!API_BASE_URL) {
+                localStorage.setItem('dpi_clientes_potenciales', JSON.stringify(CLIENTES_POTENCIALES));
+            }
+        }
         
         // ✅ AUTENTICACIÓN
         function handleAuth(e) {
             e.preventDefault();
+            console.log('🔐 Intentando autenticación...');
+            
             const username = document.getElementById('authUsername')?.value;
             const password = document.getElementById('authPassword')?.value;
             const errorEl = document.getElementById('authError');
+            
+            console.log('Usuario:', username ? '✅' : '❌', 'Password:', password ? '✅' : '❌');
             
             if (!username || !password) {
                 if (errorEl) {
@@ -1966,17 +1999,28 @@
             }
             
             if (username === 'admin' && password === 'DPI2025Admin') {
+                console.log('✅ Autenticación exitosa');
                 isAuthenticated = true;
-                document.getElementById('authOverlay')?.classList.remove('active');
+                
+                // Cerrar modal
+                const overlay = document.getElementById('authOverlay');
+                if (overlay) overlay.classList.remove('active');
+                
+                // Quitar blur
                 const mainContent = document.getElementById('mainContent');
-                if (mainContent) {
-                    mainContent.style.filter = 'none';
-                }
+                if (mainContent) mainContent.style.filter = 'none';
+                
+                // Cambiar a modo admin
                 switchMode('admin', true);
                 
-                document.getElementById('authForm')?.reset();
+                // Limpiar formulario
+                const form = document.getElementById('authForm');
+                if (form) form.reset();
                 if (errorEl) errorEl.style.display = 'none';
+                
+                showAlert('✅ Acceso administrativo concedido', 'success');
             } else {
+                console.log('❌ Credenciales incorrectas');
                 if (errorEl) {
                     errorEl.textContent = 'Usuario o contraseña incorrectos';
                     errorEl.style.display = 'block';
@@ -1985,54 +2029,83 @@
         }
 
         function cancelAuth() {
+            console.log('❌ Autenticación cancelada');
             const overlay = document.getElementById('authOverlay');
             const mainContent = document.getElementById('mainContent');
             
             if (overlay) overlay.classList.remove('active');
             if (mainContent) mainContent.style.filter = 'none';
             
-            document.getElementById('authForm')?.reset();
+            const form = document.getElementById('authForm');
+            if (form) form.reset();
+            
             const errorEl = document.getElementById('authError');
             if (errorEl) errorEl.style.display = 'none';
         }
 
         function showAuthModal() {
+            console.log('🔐 Mostrando modal de autenticación');
             const overlay = document.getElementById('authOverlay');
             const mainContent = document.getElementById('mainContent');
             
-            if (overlay) {
-                overlay.classList.add('active');
-                if (mainContent) mainContent.style.filter = 'blur(5px)';
-                
-                setTimeout(() => {
-                    const usernameInput = document.getElementById('authUsername');
-                    if (usernameInput) usernameInput.focus();
-                }, 100);
+            if (!overlay) {
+                console.error('❌ Modal de autenticación no encontrado');
+                showAlert('❌ Error: Modal de autenticación no disponible', 'error');
+                return;
             }
+            
+            overlay.classList.add('active');
+            if (mainContent) mainContent.style.filter = 'blur(5px)';
+            
+            // Focus en el campo de usuario después de un momento
+            setTimeout(() => {
+                const usernameInput = document.getElementById('authUsername');
+                if (usernameInput) {
+                    usernameInput.focus();
+                    console.log('🎯 Focus en campo usuario');
+                }
+            }, 100);
         }
 
-        // ✅ CAMBIO DE MODO
+        // ✅ HACER FUNCIONES GLOBALES PARA ACCESO DESDE HTML
+        window.switchMode = switchMode;
+        window.showAuthModal = showAuthModal;
+        window.handleAuth = handleAuth;
+        window.cancelAuth = cancelAuth;
         function switchMode(mode, fromAuth = false) {
+            console.log('🔄 Cambiando a modo:', mode, 'fromAuth:', fromAuth);
+            
             const ventasMode = document.getElementById('ventasMode');
             const adminMode = document.getElementById('adminMode');
             const modeButtons = document.querySelectorAll('.mode-btn');
 
-            if (mode === 'admin' && !fromAuth) { 
+            if (mode === 'admin' && !fromAuth && !isAuthenticated) { 
+                console.log('🔐 Mostrando modal de autenticación...');
                 showAuthModal(); 
                 return; 
             }
             
+            // Remover clase active de todos los botones
             modeButtons.forEach(btn => btn.classList.remove('active'));
             
             if (mode === 'ventas') {
+                console.log('📱 Activando modo ventas');
                 if (ventasMode) ventasMode.style.display = 'block';
                 if (adminMode) adminMode.style.display = 'none';
-                if (modeButtons[0]) modeButtons[0].classList.add('active');
+                
+                const ventasBtn = document.getElementById('ventasModeBtn');
+                if (ventasBtn) ventasBtn.classList.add('active');
+                
             } else if (mode === 'admin') {
+                console.log('⚙️ Activando modo admin');
                 if (ventasMode) ventasMode.style.display = 'none';
-                if (adminMode) adminMode.style.display = 'block';
-                if (modeButtons[1]) modeButtons[1].classList.add('active');
-                loadAdminData();
+                if (adminMode) {
+                    adminMode.style.display = 'block';
+                    loadAdminData();
+                }
+                
+                const adminBtn = document.getElementById('adminModeBtn');
+                if (adminBtn) adminBtn.classList.add('active');
             }
         }
 
@@ -2120,8 +2193,9 @@
             
             const statusEl = document.getElementById('systemStatus');
             if (statusEl) {
+                const storageMode = !API_BASE_URL ? ' • Modo Local' : ' • Servidor Online';
                 statusEl.className = 'status online';
-                statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles - ${new Date().toLocaleTimeString()}`;
+                statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles${storageMode} - ${new Date().toLocaleTimeString()}`;
             }
         }
 
@@ -2484,7 +2558,31 @@ Generado por DPI Sistema de Ventas
             }
         }
 
-        // Exportar todos los perfiles filtrados
+        // ✅ EXPORTAR JSON para reimportar
+        function exportarJSON() {
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            if (perfilesFiltrados.length === 0) {
+                showAlert('❌ No hay perfiles para exportar con los filtros actuales', 'error');
+                return;
+            }
+            
+            const jsonData = JSON.stringify(perfilesFiltrados, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `perfiles_dpi_${new Date().toISOString().split('T')[0]}.json`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            const storageInfo = !API_BASE_URL ? ' (respaldo local)' : '';
+            showAlert(`💾 ${perfilesFiltrados.length} perfiles exportados en JSON${storageInfo}`, 'success');
+        }
+
+        // ✅ EXPORTAR todos los perfiles filtrados
         function exportarPerfiles() {
             const perfilesFiltrados = filtrarPerfilesData();
             
@@ -2512,7 +2610,8 @@ Generado por DPI Sistema de Ventas
             link.click();
             document.body.removeChild(link);
             
-            showAlert(`📊 ${perfilesFiltrados.length} perfiles exportados exitosamente`, 'success');
+            const storageInfo = !API_BASE_URL ? ' (datos locales)' : '';
+            showAlert(`📊 ${perfilesFiltrados.length} perfiles exportados exitosamente${storageInfo}`, 'success');
         }
 
         // Compartir todos los perfiles
@@ -2565,6 +2664,10 @@ Generado por DPI Sistema de Ventas
                 if (cliente.urgencia) porUrgencia[cliente.urgencia] = (porUrgencia[cliente.urgencia] || 0) + 1;
             });
             
+            const modoAlmacenamiento = !API_BASE_URL ? 
+                '<div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #ffc107;"><strong>💾 Modo Local:</strong> Los datos se guardan en tu navegador. Exporta regularmente como respaldo.</div>' :
+                '<div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #28a745;"><strong>🌐 Modo Servidor:</strong> Los datos se sincronizan automáticamente.</div>';
+            
             const estadisticas = `
                 <div class="auth-overlay active" onclick="cerrarModal(event)">
                     <div class="auth-modal" style="max-width: 500px;" onclick="event.stopPropagation()">
@@ -2574,6 +2677,8 @@ Generado por DPI Sistema de Ventas
                         </div>
                         
                         <div style="text-align: left;">
+                            ${modoAlmacenamiento}
+                            
                             <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                                 <h4>📊 Resumen General</h4>
                                 <p><strong>Total de perfiles:</strong> ${total}</p>
@@ -2600,12 +2705,68 @@ Generado por DPI Sistema de Ventas
                                     `<p>${urgencia}: <strong>${count}</strong> (${Math.round(count/total*100)}%)</p>`
                                 ).join('')}
                             </div>
+                            
+                            ${!API_BASE_URL ? `
+                                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button onclick="exportarPerfiles(); cerrarModal();" class="action-btn export" style="flex: 1;">📊 Exportar Respaldo</button>
+                                    <button onclick="importarRespaldo(); cerrarModal();" class="action-btn" style="flex: 1;">📥 Importar Datos</button>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
             `;
             
             document.body.insertAdjacentHTML('beforeend', estadisticas);
+        }
+
+        // ✅ IMPORTAR RESPALDO DE DATOS
+        function importarRespaldo() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,.csv';
+            input.style.display = 'none';
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        let importedData;
+                        
+                        if (file.name.endsWith('.json')) {
+                            importedData = JSON.parse(event.target.result);
+                        } else if (file.name.endsWith('.csv')) {
+                            // Aquí podrías agregar lógica para parsear CSV
+                            showAlert('❌ Importación de CSV no implementada aún. Usa archivos JSON.', 'error');
+                            return;
+                        }
+                        
+                        if (Array.isArray(importedData)) {
+                            const respuesta = confirm(`¿Importar ${importedData.length} perfiles?\n\n⚠️ Esto reemplazará todos los datos actuales.`);
+                            if (respuesta) {
+                                CLIENTES_POTENCIALES = importedData;
+                                guardarEnLocal();
+                                renderClientesPotenciales();
+                                showAlert(`✅ ${importedData.length} perfiles importados exitosamente`, 'success');
+                            }
+                        } else {
+                            showAlert('❌ Formato de archivo no válido', 'error');
+                        }
+                        
+                    } catch (error) {
+                        showAlert(`❌ Error al importar: ${error.message}`, 'error');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
         }
 
         // ✅ RENDERIZADO MEJORADO DE PERFILES
@@ -2822,6 +2983,15 @@ Generado por DPI Sistema de Ventas
             }
             
             try {
+                // Si no hay servidor, solo eliminar localmente
+                if (!API_BASE_URL) {
+                    CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                    guardarEnLocal();
+                    renderClientesPotenciales();
+                    showAlert('Cliente eliminado exitosamente (guardado localmente)', 'success');
+                    return;
+                }
+                
                 await apiCall(`/api/clientes-potenciales/${id}`, { 
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer DPI2025Admin' } 
@@ -3397,12 +3567,36 @@ Generado por DPI Sistema de Ventas
         // ✅ INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Iniciando DPI Sistema de Ventas...');
-            console.log('🌐 API Base URL:', API_BASE_URL);
+            console.log('🌐 API Base URL:', API_BASE_URL || 'Modo Local');
+            
+            // Verificar elementos críticos
+            const authOverlay = document.getElementById('authOverlay');
+            const authForm = document.getElementById('authForm');
+            const adminModeBtn = document.getElementById('adminModeBtn');
+            
+            console.log('Elementos encontrados:');
+            console.log('- Modal auth:', authOverlay ? '✅' : '❌');
+            console.log('- Formulario auth:', authForm ? '✅' : '❌');
+            console.log('- Botón admin:', adminModeBtn ? '✅' : '❌');
+            
+            if (!authOverlay || !authForm) {
+                console.error('❌ CRÍTICO: Elementos de autenticación no encontrados');
+                showAlert('❌ Error crítico: Sistema de autenticación no disponible', 'error');
+            }
             
             // Configurar formulario de autenticación
-            const authForm = document.getElementById('authForm');
             if (authForm) {
                 authForm.addEventListener('submit', handleAuth);
+                console.log('✅ Event listener de autenticación configurado');
+            }
+            
+            // Test del botón admin
+            if (adminModeBtn) {
+                adminModeBtn.addEventListener('click', () => {
+                    console.log('🔧 Click en botón admin detectado');
+                    switchMode('admin');
+                });
+                console.log('✅ Event listener del botón admin configurado');
             }
             
             // Configurar búsqueda con debounce
@@ -3465,6 +3659,26 @@ Generado por DPI Sistema de Ventas
                     }
                     
                     try {
+                        if (!API_BASE_URL) {
+                            // Guardar localmente si no hay servidor
+                            if (currentEditingClienteId) {
+                                const index = CLIENTES_POTENCIALES.findIndex(c => c.id === currentEditingClienteId);
+                                if (index !== -1) {
+                                    CLIENTES_POTENCIALES[index] = { ...clienteData, id: currentEditingClienteId };
+                                }
+                                showAlert('Perfil actualizado exitosamente (guardado localmente)', 'success');
+                            } else {
+                                const nuevoPerfil = { ...clienteData, id: Date.now() };
+                                CLIENTES_POTENCIALES.push(nuevoPerfil);
+                                showAlert('Perfil de cliente ideal agregado exitosamente (guardado localmente)', 'success');
+                            }
+                            guardarEnLocal();
+                            await cargarClientesPotenciales();
+                            cerrarFormularioCliente();
+                            return;
+                        }
+                        
+                        // Usar servidor si está disponible
                         if (currentEditingClienteId) {
                             await apiCall(`/api/clientes-potenciales/${currentEditingClienteId}`, { 
                                 method: 'PUT', 
@@ -3500,6 +3714,13 @@ Generado por DPI Sistema de Ventas
             fetchAllData();
             cargarClientesPotenciales();
             
+            // Mostrar modo de almacenamiento
+            if (!API_BASE_URL) {
+                showAlert('💾 Modo local activado. Los datos se guardan en tu navegador.', 'success');
+            } else {
+                showAlert('🌐 Modo servidor activado. Los datos se sincronizan automáticamente.', 'success');
+            }
+            
             // Configurar monitoreo de conexión
             connectionInterval = setInterval(() => {
                 updateConnectionStatus(navigator.onLine);
@@ -3509,6 +3730,24 @@ Generado por DPI Sistema de Ventas
             window.addEventListener('offline', () => updateConnectionStatus(false));
             
             console.log('✅ Sistema inicializado correctamente');
+            
+            // Test inmediato de funciones críticas
+            setTimeout(() => {
+                console.log('🧪 Ejecutando test de funciones...');
+                
+                // Test: verificar que las funciones existen
+                const funciones = ['switchMode', 'showAuthModal', 'handleAuth'];
+                funciones.forEach(fn => {
+                    console.log(`- ${fn}:`, typeof window[fn] === 'function' ? '✅' : '❌');
+                });
+                
+                // Test: verificar elementos DOM
+                const elementos = ['authOverlay', 'authForm', 'adminModeBtn', 'ventasModeBtn'];
+                elementos.forEach(el => {
+                    const elem = document.getElementById(el);
+                    console.log(`- #${el}:`, elem ? '✅' : '❌');
+                });
+            }, 1000);
         });
 
         // ✅ LIMPIEZA AL CERRAR
