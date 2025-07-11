@@ -54,7 +54,7 @@
         .script-title { font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .script-text { background: var(--white-color); padding: 12px; border-radius: 6px; white-space: pre-line; margin: 10px 0; }
         .script-badge { padding: 3px 8px; border-radius: 10px; font-size: 0.7em; color: var(--white-color); }
-        .usage-stats { display: flex; gap: 15px; font-size: 0.8em; color: #6c757d; margin-top: 10px; }
+        .usage-stats { display: flex; gap: 15px; font-size: 0.8em; color: #6c757d; }
         .copy-btn { background: var(--secondary-color); color: var(--white-color); border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
         .copy-btn.copied { background: var(--success-color); }
         .admin-mode { display: none; }
@@ -173,7 +173,7 @@
         let isAuthenticated = false;
         let debounceTimer;
 
-        // --- CORE & API FUNCTIONS ---
+        // --- FUNCTION DEFINITIONS ---
         function showAlert(message, type = 'success') {
             const container = document.getElementById('alertContainer');
             if (!container) return;
@@ -195,11 +195,25 @@
                 return response.headers.get("content-type")?.includes("application/json") ? response.json() : response.blob();
             } catch (error) {
                 updateConnectionStatus(false);
+                console.error(`API call a ${endpoint} falló:`, error);
                 showAlert(`Error de Red: ${error.message}`, 'error');
                 throw error;
             }
         }
         
+        function updateConnectionStatus(isOnline) {
+            const el = document.getElementById('connectionStatus');
+            const headerStatus = document.getElementById('systemStatus');
+            if (el) {
+                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
+                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+            }
+            if (headerStatus) {
+                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
+                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
+            }
+        }
+
         async function fetchAllData() {
             const container = document.getElementById('scriptsContainer');
             if (container) container.innerHTML = '<div class="loading"></div>';
@@ -212,8 +226,42 @@
                 if(container) container.innerHTML = `<div class="error-message">Fallo al cargar scripts.</div>`;
             }
         }
+        
+        function showAuthModal() {
+            const overlay = document.getElementById('authOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                document.getElementById('mainContent').style.filter = 'blur(5px)';
+                setTimeout(() => document.getElementById('authUsername').focus(), 100);
+            }
+        }
 
-        // --- UI & MODE MANAGEMENT ---
+        function hideAuthModal() {
+            document.getElementById('authOverlay').classList.remove('active');
+            document.getElementById('mainContent').style.filter = 'none';
+        }
+
+        function cancelAuth() {
+            hideAuthModal();
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        }
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('authUsername').value;
+            const password = document.getElementById('authPassword').value;
+            const errorEl = document.getElementById('authError');
+            if (username === 'admin' && password === 'DPI2025Admin') {
+                isAuthenticated = true;
+                hideAuthModal();
+                switchMode('admin', true);
+            } else {
+                if (errorEl) errorEl.style.display = 'block';
+            }
+        }
+
         function switchMode(mode, fromAuth = false) {
             const ventasMode = document.getElementById('ventasMode');
             const adminMode = document.getElementById('adminMode');
@@ -284,19 +332,6 @@
                 statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles - Actualizado: ${new Date().toLocaleTimeString()}`;
             }
         }
-
-        function updateConnectionStatus(isOnline) {
-            const el = document.getElementById('connectionStatus');
-            const headerStatus = document.getElementById('systemStatus');
-            if (el) {
-                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
-                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-            }
-            if (headerStatus) {
-                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
-                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
-            }
-        }
         
         async function copyAndTrack(scriptId) {
             const card = document.querySelector(`.script-card[data-script-id="${scriptId}"]`);
@@ -309,16 +344,13 @@
             });
             try { await apiCall(`/api/scripts/${scriptId}/track`, { method: 'POST' }); } catch(e) {}
         }
-
-        // --- ADMIN FUNCTIONS ---
+        
         function loadAdminData() {
-            populateCategorySelect('scriptCategory');
-            populateCategorySelect('filterCategory');
-            renderAdminList();
+            loadScriptsListAdmin();
             loadAnalyticsDashboard();
             updateAdminStats();
         }
-        
+
         function populateCategorySelect(selectId) {
              const select = document.getElementById(selectId);
              if(!select) return;
@@ -418,8 +450,17 @@
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
             document.getElementById('dbStatus').textContent = '✅';
         }
+        
+        async function loadScriptsListAdmin() {
+            const listContainer = document.getElementById('scriptsList');
+            if (!listContainer) return;
+            listContainer.innerHTML = '<div class="loading"></div>';
+            populateCategorySelect('scriptCategory');
+            populateCategorySelect('filterCategory');
+            await fetchAllData();
+            renderAdminList();
+        }
 
-        // --- BACKUP & RESTORE ---
         async function downloadBackup() {
             try {
                 const blob = await apiCall('/api/backup', { headers: { 'Authorization': 'Bearer DPI2025Admin' } });
@@ -445,7 +486,6 @@
             }
         }
         
-        // --- SEARCH FUNCTIONS ---
         function performSearch(query) {
              const resultsContainer = document.getElementById('searchResults');
              resultsContainer.innerHTML = `<div class="loading" style="padding:10px;"></div>`;
@@ -478,30 +518,21 @@
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            const authForm = document.getElementById('authForm');
-            if(authForm) authForm.addEventListener('submit', handleAuth);
-            
-            const searchInput = document.getElementById('searchInput');
-            if(searchInput) {
-                 searchInput.addEventListener('keyup', (e) => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(() => {
-                        const query = e.target.value.trim();
-                        if (query.length > 1) performSearch(query);
-                        else {
-                            const searchResults = document.getElementById('searchResults');
-                            if(searchResults) searchResults.classList.remove('active');
-                        }
-                    }, 300);
-                });
-            }
-
-            document.addEventListener('click', (e) => {
-                const searchBox = e.target.closest('.search-box');
-                const searchResults = document.getElementById('searchResults');
-                if (!searchBox && searchResults) searchResults.classList.remove('active');
+            document.getElementById('authForm').addEventListener('submit', handleAuth);
+            document.getElementById('searchInput').addEventListener('keyup', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const query = e.target.value.trim();
+                    if (query.length > 1) performSearch(query);
+                    else document.getElementById('searchResults').classList.remove('active');
+                }, 300);
             });
-
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) {
+                    const searchResults = document.getElementById('searchResults');
+                    if (searchResults) searchResults.classList.remove('active');
+                }
+            });
             fetchAllData();
             setInterval(() => updateConnectionStatus(navigator.onLine), 10000);
         });
