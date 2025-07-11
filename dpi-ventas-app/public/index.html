@@ -22,548 +22,12 @@
             --border-color: #e3e8ee;
         }
 
-        // ✅ FUNCIONES DEL PROCESO DE PRE-CALIFICACIÓN
-        function iniciarProceso() {
-            const procesoPanel = document.getElementById('procesoPanel');
-            if (procesoPanel) {
-                procesoPanel.style.display = 'block';
-                
-                // Scroll suave hacia el proceso
-                setTimeout(() => {
-                    procesoPanel.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-
-        /*
-        📋 ENDPOINTS NECESARIOS EN EL BACKEND PARA CLIENTES POTENCIALES
-
-        Para que el sistema de clientes potenciales funcione completamente,
-        necesitas agregar estos endpoints a tu server.js:
-
-        1. GET /api/clientes-potenciales
-           - Retorna array de todos los clientes potenciales
-           - Incluir JOIN con información de vendedor si existe
-
-        2. POST /api/clientes-potenciales
-           - Crea nuevo cliente potencial
-           - Requiere autenticación (mismo middleware requireAuth)
-           - Campos: nombre, tipo, contacto, telefono, caracteristicas, necesidad, 
-                    presupuesto, urgencia, proximosPasos, vendedor, fecha
-
-        3. PUT /api/clientes-potenciales/:id
-           - Actualiza cliente potencial existente
-           - Requiere autenticación
-
-        4. DELETE /api/clientes-potenciales/:id
-           - Elimina cliente potencial
-           - Requiere autenticación
-
-        TABLA SQL REQUERIDA:
-        
-        CREATE TABLE clientes_potenciales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            tipo TEXT NOT NULL,
-            contacto TEXT,
-            telefono TEXT,
-            caracteristicas TEXT NOT NULL,
-            necesidad TEXT NOT NULL,
-            presupuesto TEXT,
-            urgencia TEXT,
-            proximos_pasos TEXT,
-            vendedor TEXT,
-            fecha_contacto DATE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        Después de implementar estos endpoints, reemplaza los comentarios TODO
-        en el código JavaScript con las llamadas reales a la API.
-        */
-                }, 100);
-                
-                showAlert('🎯 Proceso de calificación iniciado. Sigue cada etapa en orden.', 'success');
-            }
-        }
-        
-        function cerrarProceso() {
-            const procesoPanel = document.getElementById('procesoPanel');
-            if (procesoPanel) {
-                procesoPanel.style.display = 'none';
-                showAlert('📋 Proceso de calificación cerrado', 'success');
-            }
-        }
-        
-        function irACategoria(categoria) {
-            // Cerrar proceso
-            cerrarProceso();
-            
-            // Navegar a la categoría
-            const tabs = Array.from(document.querySelectorAll('.tab'));
-            const targetTab = tabs.find(tab => {
-                const tabText = tab.textContent.toLowerCase();
-                return tabText.includes(categoria);
-            });
-            
-            if (targetTab) {
-                showTab(categoria, targetTab);
-                
-                // Scroll suave hacia los scripts
-                setTimeout(() => {
-                    document.getElementById('categoryTabs').scrollIntoView({ 
-                        behavior: 'smooth' 
-                    });
-                }, 100);
-                
-                showAlert(`📝 Mostrando scripts de ${getCategoryName(categoria)}`, 'success');
-            }
-        }
-        
-        function tomarDecision(decision) {
-            const messages = {
-                'verde': {
-                    title: '🟢 DECISIÓN: PROCEDER A COTIZACIÓN',
-                    message: 'Cliente calificado correctamente. Puedes invertir tiempo en una cotización formal.',
-                    category: 'cierre'
-                },
-                'amarillo': {
-                    title: '🟡 DECISIÓN: INVESTIGAR MÁS',
-                    message: 'Cliente necesita más calificación. Programa una segunda llamada con preguntas específicas.',
-                    category: 'calificacion'
-                },
-                'rojo': {
-                    title: '🔴 DECISIÓN: PAUSAR PROCESO',
-                    message: 'Cliente no calificado. No inviertas tiempo en cotización. Usa scripts básicos.',
-                    category: 'bienvenida'
-                }
-            };
-            
-            const msg = messages[decision];
-            showAlert(msg.message, decision === 'verde' ? 'success' : 'error');
-            
-            // Mostrar modal con la decisión
-            if (confirm(`${msg.title}\n\n${msg.message}\n\n¿Quieres ver los scripts recomendados para esta situación?`)) {
-                irACategoria(msg.category);
-            } else {
-                cerrarProceso();
-            }
-        }
-
-        // ✅ MANEJO DE RECURSOS Y HERRAMIENTAS (DESHABILITADO - EN DESARROLLO)
-        function abrirRecurso(tipo) {
-            // Recursos temporalmente deshabilitados
-            showAlert('🚧 Esta sección está en desarrollo. Estará disponible próximamente.', 'error');
-            return;
-        }
-
-        // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
-        function renderClientesPotenciales() {
-            const container = document.getElementById('clientesPotencialesList');
-            if (!container) return;
-            
-            if (CLIENTES_POTENCIALES.length === 0) {
-                container.innerHTML = `
-                    <div class="cliente-empty">
-                        📝 No hay clientes potenciales registrados.<br>
-                        ¡Agrega el primero usando el botón de arriba!
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = CLIENTES_POTENCIALES.map(cliente => createClienteCard(cliente)).join('');
-        }
-        
-        function createClienteCard(cliente) {
-            const tipoLabels = {
-                restaurante: "🍽️ Restaurante",
-                retail: "🏪 Retail", 
-                servicios: "💼 Servicios",
-                clinica: "🏥 Clínica",
-                empresa: "🏢 Empresa",
-                otro: "📋 Otro"
-            };
-            
-            const presupuestoLabels = {
-                bajo: "Bajo ($500-$2K)",
-                medio: "Medio ($2K-$5K)", 
-                alto: "Alto ($5K+)"
-            };
-            
-            const urgenciaLabels = {
-                baja: "Sin prisa",
-                media: "1-2 meses",
-                alta: "< 1 mes"
-            };
-            
-            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
-            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
-            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
-            
-            return `
-                <div class="cliente-potencial-card">
-                    <div class="cliente-header">
-                        <div class="cliente-nombre">${cliente.nombre}</div>
-                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
-                    </div>
-                    
-                    <div class="cliente-info">
-                        <div class="cliente-field">
-                            <strong>Contacto:</strong> ${cliente.contacto || 'No especificado'}
-                        </div>
-                        <div class="cliente-field">
-                            <strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}
-                        </div>
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>¿Por qué es potencial?</strong><br>
-                        ${cliente.caracteristicas}
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>Necesidad identificada:</strong><br>
-                        ${cliente.necesidad}
-                    </div>
-                    
-                    ${proximosPasos ? `
-                        <div class="cliente-descripcion">
-                            <strong>Próximos pasos:</strong><br>
-                            ${proximosPasos}
-                        </div>
-                    ` : ''}
-                    
-                    <div class="cliente-tags">
-                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
-                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
-                    </div>
-                    
-                    <div class="cliente-footer">
-                        <div>
-                            <strong>Vendedor:</strong> ${cliente.vendedor || 'No especificado'} | 
-                            <strong>Fecha:</strong> ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'No especificada'}
-                        </div>
-                        <div class="cliente-actions">
-                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
-                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function editarCliente(id) {
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
-            if (!cliente) {
-                showAlert('Cliente no encontrado', 'error');
-                return;
-            }
-            
-            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
-            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
-            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
-            
-            // Llenar formulario con datos del cliente
-            document.getElementById('clienteId').value = cliente.id;
-            document.getElementById('clienteNombre').value = cliente.nombre;
-            document.getElementById('clienteTipo').value = cliente.tipo;
-            document.getElementById('clienteContacto').value = cliente.contacto || '';
-            document.getElementById('clienteTelefono').value = cliente.telefono || '';
-            document.getElementById('clienteCaracteristicas').value = cliente.caracteristicas;
-            document.getElementById('clienteNecesidad').value = cliente.necesidad;
-            document.getElementById('clientePresupuesto').value = cliente.presupuesto || '';
-            document.getElementById('clienteUrgencia').value = cliente.urgencia || '';
-            document.getElementById('clienteProximosPasos').value = proximosPasos || '';
-            document.getElementById('clienteVendedor').value = cliente.vendedor || '';
-            document.getElementById('clienteFecha').value = fechaContacto || '';
-            
-            currentEditingClienteId = id;
-            
-            // Mostrar formulario
-            const formulario = document.getElementById('formularioCliente');
-            const titulo = document.getElementById('tituloFormulario');
-            
-            if (formulario && titulo) {
-                titulo.textContent = `✏️ Editando: ${cliente.nombre}`;
-                formulario.style.display = 'block';
-                
-                setTimeout(() => {
-                    formulario.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-            }
-        }
-
-        async function eliminarCliente(id) {
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
-            if (!cliente) return;
-            
-            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
-                return;
-            }
-            
-            try {
-                // ✅ USAR API REAL
-                await apiCall(`/api/clientes-potenciales/${id}`, { 
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                });
-                
-                // Actualizar array local
-                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
-                renderClientesPotenciales();
-                showAlert('Cliente eliminado exitosamente', 'success');
-                
-            } catch (error) {
-                showAlert(`Error al eliminar cliente: ${error.message}`, 'error');
-            }
-        }
-        
-        function createClienteCard(cliente) {
-            const tipoLabels = {
-                restaurante: "🍽️ Restaurante",
-                retail: "🏪 Retail", 
-                servicios: "💼 Servicios",
-                clinica: "🏥 Clínica",
-                empresa: "🏢 Empresa",
-                otro: "📋 Otro"
-            };
-            
-            const presupuestoLabels = {
-                bajo: "Bajo ($500-$2K)",
-                medio: "Medio ($2K-$5K)", 
-                alto: "Alto ($5K+)"
-            };
-            
-            const urgenciaLabels = {
-                baja: "Sin prisa",
-                media: "1-2 meses",
-                alta: "< 1 mes"
-            };
-            
-            return `
-                <div class="cliente-potencial-card">
-                    <div class="cliente-header">
-                        <div class="cliente-nombre">${cliente.nombre}</div>
-                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
-                    </div>
-                    
-                    <div class="cliente-info">
-                        <div class="cliente-field">
-                            <strong>Contacto:</strong> ${cliente.contacto || 'No especificado'}
-                        </div>
-                        <div class="cliente-field">
-                            <strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}
-                        </div>
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>¿Por qué es potencial?</strong><br>
-                        ${cliente.caracteristicas}
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>Necesidad identificada:</strong><br>
-                        ${cliente.necesidad}
-                    </div>
-                    
-                    ${cliente.proximosPasos ? `
-                        <div class="cliente-descripcion">
-                            <strong>Próximos pasos:</strong><br>
-                            ${cliente.proximosPasos}
-                        </div>
-                    ` : ''}
-                    
-                    <div class="cliente-tags">
-                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
-                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
-                    </div>
-                    
-                    <div class="cliente-footer">
-                        <div>
-                            <strong>Vendedor:</strong> ${cliente.vendedor || 'No especificado'} | 
-                            <strong>Fecha:</strong> ${cliente.fecha ? new Date(cliente.fecha).toLocaleDateString() : 'No especificada'}
-                        </div>
-                        <div class="cliente-actions">
-                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
-                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function abrirFormularioCliente() {
-            const formulario = document.getElementById('formularioCliente');
-            const titulo = document.getElementById('tituloFormulario');
-            
-            if (formulario && titulo) {
-                // Limpiar formulario
-                document.getElementById('clienteForm').reset();
-                document.getElementById('clienteId').value = '';
-                currentEditingClienteId = null;
-                
-                titulo.textContent = '➕ Agregar Nuevo Cliente Potencial';
-                formulario.style.display = 'block';
-                
-                // Scroll al formulario
-                setTimeout(() => {
-                    formulario.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-                
-                showAlert('📝 Formulario abierto. Completa la información del cliente potencial.', 'success');
-            }
-        }
-        
-        function cerrarFormularioCliente() {
-            const formulario = document.getElementById('formularioCliente');
-            if (formulario) {
-                formulario.style.display = 'none';
-                currentEditingClienteId = null;
-            }
-        }
-        
-        function editarCliente(id) {
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
-            if (!cliente) {
-                showAlert('Cliente no encontrado', 'error');
-                return;
-            }
-            
-            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
-            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
-            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
-            
-            // Llenar formulario con datos del cliente
-            document.getElementById('clienteId').value = cliente.id;
-            document.getElementById('clienteNombre').value = cliente.nombre;
-            document.getElementById('clienteTipo').value = cliente.tipo;
-            document.getElementById('clienteContacto').value = cliente.contacto || '';
-            document.getElementById('clienteTelefono').value = cliente.telefono || '';
-            document.getElementById('clienteCaracteristicas').value = cliente.caracteristicas;
-            document.getElementById('clienteNecesidad').value = cliente.necesidad;
-            document.getElementById('clientePresupuesto').value = cliente.presupuesto || '';
-            document.getElementById('clienteUrgencia').value = cliente.urgencia || '';
-            document.getElementById('clienteProximosPasos').value = proximosPasos || '';
-            document.getElementById('clienteVendedor').value = cliente.vendedor || '';
-            document.getElementById('clienteFecha').value = fechaContacto || '';
-            
-            currentEditingClienteId = id;
-            
-            // Mostrar formulario
-            const formulario = document.getElementById('formularioCliente');
-            const titulo = document.getElementById('tituloFormulario');
-            
-            if (formulario && titulo) {
-                titulo.textContent = `✏️ Editando: ${cliente.nombre}`;
-                formulario.style.display = 'block';
-                
-                setTimeout(() => {
-                    formulario.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-            }
-        }
-        
-        async function eliminarCliente(id) {
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
-            if (!cliente) return;
-            
-            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
-                return;
-            }
-            
-            try {
-                // ✅ USAR API REAL
-                await apiCall(`/api/clientes-potenciales/${id}`, { 
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                });
-                
-                // Actualizar array local
-                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
-                renderClientesPotenciales();
-                showAlert('Cliente eliminado exitosamente', 'success');
-                
-            } catch (error) {
-                showAlert(`Error al eliminar cliente: ${error.message}`, 'error');
-            }
-        }
-        
-        // Event listener para el formulario de clientes
-        document.addEventListener('DOMContentLoaded', () => {
-            // ... código existente ...
-            
-            // Agregar listener para formulario de clientes
-            const clienteForm = document.getElementById('clienteForm');
-            if (clienteForm) {
-                clienteForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    // Recopilar datos del formulario
-                    const clienteData = {
-                        nombre: document.getElementById('clienteNombre').value.trim(),
-                        tipo: document.getElementById('clienteTipo').value,
-                        contacto: document.getElementById('clienteContacto').value.trim(),
-                        telefono: document.getElementById('clienteTelefono').value.trim(),
-                        caracteristicas: document.getElementById('clienteCaracteristicas').value.trim(),
-                        necesidad: document.getElementById('clienteNecesidad').value.trim(),
-                        presupuesto: document.getElementById('clientePresupuesto').value,
-                        urgencia: document.getElementById('clienteUrgencia').value,
-                        proximosPasos: document.getElementById('clienteProximosPasos').value.trim(),
-                        vendedor: document.getElementById('clienteVendedor').value.trim(),
-                        fecha: document.getElementById('clienteFecha').value
-                    };
-                    
-                    // Validaciones básicas
-                    if (!clienteData.nombre || !clienteData.tipo || !clienteData.caracteristicas || !clienteData.necesidad) {
-                        showAlert('Por favor completa todos los campos obligatorios', 'error');
-                        return;
-                    }
-                    
-                    try {
-                        if (currentEditingClienteId) {
-                            // ✅ EDITAR CON API REAL
-                            await apiCall(`/api/clientes-potenciales/${currentEditingClienteId}`, { 
-                                method: 'PUT', 
-                                headers: { 
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer DPI2025Admin' 
-                                },
-                                body: JSON.stringify(clienteData) 
-                            });
-                            showAlert('Cliente actualizado exitosamente', 'success');
-                        } else {
-                            // ✅ CREAR CON API REAL
-                            await apiCall('/api/clientes-potenciales', { 
-                                method: 'POST', 
-                                headers: { 
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer DPI2025Admin' 
-                                },
-                                body: JSON.stringify(clienteData) 
-                            });
-                            showAlert('Cliente potencial agregado exitosamente', 'success');
-                        }
-                        
-                        // Recargar datos desde el servidor
-                        await cargarClientesPotenciales();
-                        cerrarFormularioCliente();
-                        
-                    } catch (error) {
-                        showAlert(`Error al guardar cliente: ${error.message}`, 'error');
-                    }
-                });
-            }
-            
-            // Cargar clientes potenciales al inicializar
-            cargarClientesPotenciales();
-        });
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: var(--bg-color); 
             min-height: 100vh; 
-            padding: 20px; 
+            padding: 10px; 
             font-size: 15px; 
             color: var(--dark-color); 
         }
@@ -575,23 +39,23 @@
         .header { 
             text-align: center; 
             color: var(--dark-color); 
-            margin-bottom: 30px; 
+            margin-bottom: 20px; 
         }
         .header h1 { 
-            font-size: 2.5em; 
+            font-size: 2em; 
             font-weight: 700; 
             margin-bottom: 8px; 
         }
         .header p { 
-            font-size: 1.1em; 
+            font-size: 1em; 
             color: #7f8c8d; 
         }
         .header .status { 
             background-color: rgba(0,0,0,0.05); 
-            padding: 8px 20px; 
+            padding: 6px 16px; 
             border-radius: 20px; 
-            font-size: 0.9em; 
-            margin-top: 15px; 
+            font-size: 0.85em; 
+            margin-top: 10px; 
             display: inline-block; 
             transition: all 0.3s ease; 
             border: 1px solid var(--border-color); 
@@ -608,24 +72,25 @@
         }
         .mode-switcher-wrapper { 
             text-align: center; 
-            margin-bottom: 30px; 
+            margin-bottom: 20px; 
         }
         .mode-switcher { 
             background: #e0e5ec; 
             border-radius: 30px; 
             display: inline-flex; 
-            padding: 5px; 
-            box-shadow: inset 5px 5px 10px #caced4, inset -5px -5px 10px #f8f9fa; 
+            padding: 4px; 
+            box-shadow: inset 3px 3px 6px #caced4, inset -3px -3px 6px #f8f9fa; 
         }
         .mode-btn { 
             background: transparent; 
             color: #555; 
             border: none; 
-            padding: 10px 25px; 
+            padding: 8px 20px; 
             border-radius: 25px; 
             font-weight: 600; 
             cursor: pointer; 
             transition: all 0.3s ease; 
+            font-size: 0.9em;
         }
         .mode-btn.active { 
             background: var(--primary-color); 
@@ -634,39 +99,103 @@
         }
         .panel { 
             background: var(--light-color); 
-            border-radius: 16px; 
-            padding: 25px; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); 
-            margin-bottom: 25px; 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06); 
+            margin-bottom: 20px; 
         }
         .panel h2 { 
-            font-size: 1.4em; 
+            font-size: 1.3em; 
             font-weight: 600; 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
             border-bottom: 2px solid var(--border-color); 
-            padding-bottom: 15px; 
+            padding-bottom: 10px; 
         }
-        .loading,         .empty-state { 
+        .loading, .empty-state { 
             text-align: center; 
-            padding: 50px 20px; 
+            padding: 40px 20px; 
             color: #7f8c8d; 
+        }
+        
+        /* 🔍 BÚSQUEDA MEJORADA PARA MÓVIL */
+        .search-box { 
+            position: relative; 
+            padding-bottom: 15px; 
+            width: 100%;
+        }
+        .search-input { 
+            width: 100%; 
+            padding: 12px 15px 12px 40px; 
+            border: 2px solid var(--border-color); 
+            border-radius: 10px; 
+            font-size: 0.95em; 
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .search-input:focus { 
+            outline: none; 
+            border-color: var(--primary-color); 
+        }
+        .search-box::before { 
+            content: '🔍'; 
+            position: absolute; 
+            left: 15px; 
+            top: 12px; 
+            color: #aaa; 
+            font-size: 1.1em; 
+            pointer-events: none; 
+        }
+        .search-results { 
+            position: absolute; 
+            top: calc(100% - 5px); 
+            left: 0; 
+            right: 0; 
+            background: var(--light-color); 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+            max-height: 300px; 
+            overflow-y: auto; 
+            z-index: 1000; 
+            display: none; 
+        }
+        .search-results.active { 
+            display: block; 
+        }
+        .search-result-item { 
+            padding: 10px 12px; 
+            border-bottom: 1px solid #f1f3f4; 
+            cursor: pointer; 
+            font-size: 0.9em;
+        }
+        .search-result-item:hover {
+            background-color: var(--bg-color);
+        }
+        .search-result-category {
+            font-size: 0.75em;
+            color: var(--primary-color);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        mark { 
+            background: #fff3cd; 
         }
         
         /* 🚦 SEMÁFORO DE CALIFICACIÓN */
         .semaforo-container {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3 columnas en una fila */
-            gap: 20px;
+            grid-template-columns: 1fr;
+            gap: 15px;
             margin-bottom: 20px;
         }
         
         .semaforo-light {
-            border-radius: 16px;
-            padding: 25px;
+            border-radius: 12px;
+            padding: 20px;
             color: white;
             font-weight: 600;
             position: relative;
-            min-height: 200px;
+            min-height: 160px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -675,7 +204,7 @@
         }
         
         .semaforo-light:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
         }
         
         .semaforo-light:hover .semaforo-icon {
@@ -683,67 +212,50 @@
             background: rgba(255, 255, 255, 0.4);
         }
         
-        .semaforo-light::after {
-            content: 'Click para ver scripts relacionados';
-            position: absolute;
-            bottom: 10px;
-            right: 15px;
-            font-size: 0.7em;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 4px 8px;
-            border-radius: 8px;
-        }
-        
-        .semaforo-light:hover::after {
-            opacity: 1;
-        }
-        
         .semaforo-light.verde {
             background: linear-gradient(135deg, #4CAF50, #66BB6A);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
         }
         
         .semaforo-light.amarillo {
             background: linear-gradient(135deg, #FF9800, #FFB74D);
-            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
+            box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
         }
         
         .semaforo-light.rojo {
             background: linear-gradient(135deg, #F44336, #EF5350);
-            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.3);
-            /* Removido grid-column: 1 / -1; para mantener en fila */
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
         }
         
         .semaforo-icon {
-            width: 40px;
-            height: 40px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
-            margin-bottom: 15px;
+            font-size: 1.3em;
+            margin-bottom: 12px;
             align-self: flex-start;
             transition: transform 0.3s ease, background 0.3s ease;
         }
         
         .semaforo-title {
-            font-size: 1.3em;
+            font-size: 1.2em;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         .semaforo-description {
             font-style: italic;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             opacity: 0.95;
-            line-height: 1.4;
+            line-height: 1.3;
+            font-size: 0.95em;
         }
         
         .semaforo-list {
@@ -753,17 +265,17 @@
         }
         
         .semaforo-list li {
-            padding: 5px 0;
+            padding: 4px 0;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.95em;
+            gap: 6px;
+            font-size: 0.9em;
         }
         
         .semaforo-list li::before {
             content: '✓';
             font-weight: bold;
-            font-size: 1.1em;
+            font-size: 1em;
         }
         
         .semaforo-light.amarillo .semaforo-list li::before {
@@ -777,27 +289,28 @@
         /* 📋 PROCESO DE PRE-CALIFICACIÓN */
         .precalificacion-header {
             text-align: center;
-            margin-bottom: 25px;
-            padding: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
+            border-radius: 10px;
             color: white;
         }
         
         .precalificacion-header p {
-            margin-bottom: 15px;
-            font-size: 1.1em;
+            margin-bottom: 12px;
+            font-size: 1em;
         }
         
         .proceso-btn {
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: 2px solid white;
-            padding: 12px 30px;
-            border-radius: 25px;
+            padding: 10px 25px;
+            border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-size: 0.9em;
         }
         
         .proceso-btn:hover {
@@ -806,143 +319,150 @@
         }
         
         .proceso-panel {
-            border-left: 5px solid var(--primary-color);
+            border-left: 4px solid var(--primary-color);
         }
         
         .etapas-container {
             display: grid;
-            gap: 25px;
+            gap: 20px;
         }
         
         .etapa {
             background: var(--bg-color);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 15px;
             border: 1px solid var(--border-color);
             transition: all 0.3s ease;
         }
         
         .etapa:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         
         .etapa-header {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
             border-bottom: 2px solid var(--border-color);
         }
         
         .etapa-numero {
             background: var(--primary-color);
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1.2em;
+            font-size: 1.1em;
         }
         
         .etapa-header h3 {
             flex: 1;
             margin: 0;
             color: var(--dark-color);
+            font-size: 1.1em;
         }
         
         .etapa-tiempo {
             background: var(--warning-color);
             color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
             font-weight: 600;
         }
         
         .etapa-content {
             display: grid;
-            gap: 15px;
+            gap: 12px;
         }
         
         .objetivo {
             background: rgba(15, 167, 149, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid var(--primary-color);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+            font-size: 0.9em;
         }
         
         .preguntas-clave {
             background: rgba(255, 193, 7, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid var(--warning-color);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--warning-color);
+            font-size: 0.9em;
         }
         
         .preguntas-clave ul, .objetivo ul {
-            margin: 10px 0 0 20px;
+            margin: 8px 0 0 16px;
         }
         
         .preguntas-clave li, .objetivo li {
-            margin: 5px 0;
+            margin: 4px 0;
             font-style: italic;
+            font-size: 0.85em;
         }
         
         .señales-alerta {
             background: rgba(220, 53, 69, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid var(--danger-color);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--danger-color);
+            font-size: 0.9em;
         }
         
         .alerta {
             display: inline-block;
             background: var(--danger-color);
             color: white;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            margin: 3px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            margin: 2px;
         }
         
         .validacion-presupuesto {
             background: rgba(40, 167, 69, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid var(--success-color);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--success-color);
             font-style: italic;
+            font-size: 0.9em;
         }
         
         .usar-script-btn {
             background: var(--primary-color);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s ease;
             justify-self: start;
+            font-size: 0.85em;
         }
         
         .usar-script-btn:hover {
             background: var(--secondary-color);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
         
         .decision-matrix {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: 1fr;
+            gap: 12px;
         }
         
         .decision-verde, .decision-amarillo, .decision-rojo {
-            padding: 15px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 10px;
             text-align: center;
         }
         
@@ -963,13 +483,14 @@
         
         .decision-btn {
             border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            margin-top: 10px;
+            margin-top: 8px;
             width: 100%;
             transition: all 0.3s ease;
+            font-size: 0.85em;
         }
         
         .decision-btn.verde {
@@ -988,417 +509,142 @@
         }
         
         .decision-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
         }
         
         .proceso-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 30px;
-            padding-top: 20px;
+            margin-top: 25px;
+            padding-top: 15px;
             border-top: 2px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .cerrar-proceso-btn {
             background: var(--danger-color);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.85em;
         }
         
         .tiempo-total {
             font-weight: 600;
             color: var(--info-color);
-        }
-        
-        /* Responsive para proceso de calificación */
-        @media (max-width: 768px) {
-            .decision-matrix {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-            
-            .etapa-header {
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
-            }
-            
-            .proceso-footer {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-            
-            .precalificacion-header {
-                padding: 15px;
-            }
-            
-            .precalificacion-header p {
-                font-size: 1em;
-            }
-        }
-        
-        /* 👤 PERFIL DE CLIENTE IDEAL */
-        .cliente-ideal-container {
-            display: grid;
-            gap: 25px;
-        }
-        
-        .perfil-section {
-            border-radius: 12px;
-            padding: 20px;
-            border: 2px solid;
-        }
-        
-        .perfil-section.neutral {
-            background: rgba(255, 193, 7, 0.05);
-            border-color: var(--warning-color);
-        }
-        
-        .perfil-section h3 {
-            margin-bottom: 20px;
-            font-size: 1.2em;
-            font-weight: 700;
-        }
-        
-        .perfil-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-        }
-        
-        .perfil-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .perfil-card h4 {
-            margin-bottom: 10px;
-            color: var(--dark-color);
-            font-size: 1em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .perfil-card ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .perfil-card li {
-            padding: 4px 0;
-            color: #555;
             font-size: 0.9em;
-            position: relative;
-            padding-left: 15px;
         }
         
-        .perfil-card li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-        
-        /* 🛠️ RECURSOS Y HERRAMIENTAS */
-        .recursos-container {
-            display: grid;
-            gap: 30px;
-        }
-        
-        .recursos-section h3 {
-            margin-bottom: 15px;
-            color: var(--dark-color);
-            font-size: 1.2em;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-        
-        .recursos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-        }
-        
-        .recurso-card {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            text-decoration: none;
-            color: inherit;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .recurso-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-color: var(--primary-color);
-        }
-        
-        .recurso-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--bg-color);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            flex-shrink: 0;
-        }
-        
-        .recurso-info {
-            flex: 1;
-        }
-        
-        .recurso-info h4 {
-            margin: 0 0 5px 0;
-            color: var(--dark-color);
-            font-size: 1em;
-            font-weight: 600;
-        }
-        
-        .recurso-info p {
-            margin: 0;
-            color: #7f8c8d;
-            font-size: 0.9em;
-            line-height: 1.4;
-        }
-        
-        .recurso-arrow {
-            font-size: 1.2em;
-            color: var(--primary-color);
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-        
-        /* Colores específicos para diferentes tipos de recursos */
-        .recurso-card.calculadora .recurso-icon { background: rgba(15, 167, 149, 0.1); }
-        .recurso-card.lista-precios .recurso-icon { background: rgba(255, 193, 7, 0.1); }
-        .recurso-card.descuentos .recurso-icon { background: rgba(40, 167, 69, 0.1); }
-        .recurso-card.cotizacion .recurso-icon { background: rgba(23, 162, 184, 0.1); }
-        .recurso-card.contrato .recurso-icon { background: rgba(108, 117, 125, 0.1); }
-        .recurso-card.portfolio .recurso-icon { background: rgba(220, 53, 69, 0.1); }
-        .recurso-card.whatsapp .recurso-icon { background: rgba(37, 211, 102, 0.1); }
-        .recurso-card.drive .recurso-icon { background: rgba(66, 133, 244, 0.1); }
-        .recurso-card.catalogo .recurso-icon { background: rgba(156, 39, 176, 0.1); }
-        
-        .recurso-card.contacto {
-            cursor: default;
-        }
-        
-        .recurso-card.contacto:hover {
-            transform: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .recurso-card.contacto .recurso-icon {
-            background: rgba(15, 167, 149, 0.1);
-        }
-        
-        /* 🚧 OVERLAY DE DESARROLLO */
-        .recursos-panel {
-            position: relative;
-        }
-        
-        .recursos-panel .recursos-container {
-            filter: blur(3px);
-            pointer-events: none;
-            user-select: none;
-        }
-        
-        .desarrollo-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 16px;
-            z-index: 10;
-        }
-        
-        .desarrollo-content {
-            text-align: center;
-            padding: 40px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-            border: 2px solid var(--border-color);
-            max-width: 500px;
-        }
-        
-        .desarrollo-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
-        }
-        
-        .desarrollo-content h3 {
-            color: var(--dark-color);
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        
-        .desarrollo-content p {
-            color: #7f8c8d;
-            margin-bottom: 10px;
-            line-height: 1.5;
-        }
-        
-        .desarrollo-subtitle {
-            font-size: 0.9em;
-            font-style: italic;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-        
-        /* Responsive para overlay de desarrollo */
-        @media (max-width: 480px) {
-            .desarrollo-overlay {
-                padding: 10px;
-            }
-            
-            .desarrollo-content {
-                padding: 20px 15px;
-                margin: 0 10px;
-            }
-            
-            .desarrollo-content h3 {
-                font-size: 1.1em;
-            }
-            
-            .desarrollo-icon {
-                font-size: 2.5em;
-                margin-bottom: 10px;
-            }
-            
-            .desarrollo-content p {
-                font-size: 0.85em;
-            }
-        }
-        
-        /* 📝 SISTEMA DINÁMICO DE CLIENTES POTENCIALES */
+        /* 📝 CLIENTES POTENCIALES */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .section-header h3 {
             margin: 0;
+            font-size: 1.1em;
         }
         
         .agregar-cliente-btn {
             background: var(--primary-color);
             color: white;
             border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
+            padding: 6px 12px;
+            border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.9em;
+            font-size: 0.85em;
             transition: all 0.3s ease;
         }
         
         .agregar-cliente-btn:hover {
             background: var(--secondary-color);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
         
         .section-description {
             background: rgba(255, 193, 7, 0.1);
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            border-left: 4px solid var(--warning-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+            border-left: 3px solid var(--warning-color);
         }
         
         .formulario-cliente {
             background: white;
             border: 2px solid var(--primary-color);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         }
         
         .form-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 2px solid var(--border-color);
         }
         
         .form-header h4 {
             margin: 0;
             color: var(--primary-color);
+            font-size: 1em;
         }
         
         .cerrar-form-btn {
             background: var(--danger-color);
             color: white;
             border: none;
-            width: 30px;
-            height: 30px;
+            width: 25px;
+            height: 25px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8em;
+            font-size: 0.75em;
         }
         
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
         }
         
         .form-group {
             display: flex;
             flex-direction: column;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .form-group label {
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             color: var(--dark-color);
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
         
         .form-group input, .form-group select, .form-group textarea {
-            padding: 10px;
+            padding: 8px;
             border: 2px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 0.9em;
+            border-radius: 5px;
+            font-size: 0.85em;
             transition: border-color 0.3s ease;
         }
         
@@ -1409,94 +655,99 @@
         
         .form-group textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 70px;
         }
         
         .form-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: flex-end;
-            margin-top: 20px;
-            padding-top: 15px;
+            margin-top: 15px;
+            padding-top: 12px;
             border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
         }
         
         .guardar-cliente-btn {
             background: var(--success-color);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s ease;
+            font-size: 0.85em;
         }
         
         .guardar-cliente-btn:hover {
             background: #218838;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
         
         .cancelar-btn {
             background: var(--danger-color);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.85em;
         }
         
         .clientes-potenciales-lista {
             display: grid;
-            gap: 15px;
+            gap: 12px;
         }
         
         .cliente-potencial-card {
             background: white;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 6px;
+            padding: 12px;
             transition: all 0.3s ease;
             position: relative;
         }
         
         .cliente-potencial-card:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
         }
         
         .cliente-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 5px;
         }
         
         .cliente-nombre {
             font-weight: 700;
             color: var(--dark-color);
-            font-size: 1.1em;
+            font-size: 1em;
         }
         
         .cliente-tipo {
             background: var(--warning-color);
             color: white;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.75em;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
             font-weight: 600;
         }
         
         .cliente-info {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
         }
         
         .cliente-field {
-            font-size: 0.85em;
+            font-size: 0.8em;
         }
         
         .cliente-field strong {
@@ -1505,26 +756,26 @@
         
         .cliente-descripcion {
             background: var(--bg-color);
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.9em;
-            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-bottom: 8px;
             font-style: italic;
         }
         
         .cliente-tags {
             display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-bottom: 8px;
             flex-wrap: wrap;
         }
         
         .cliente-tag {
             background: var(--info-color);
             color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-size: 0.65em;
             font-weight: 600;
         }
         
@@ -1539,24 +790,26 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 8px;
+            padding-top: 8px;
             border-top: 1px solid var(--border-color);
-            font-size: 0.8em;
+            font-size: 0.75em;
             color: #7f8c8d;
+            flex-wrap: wrap;
+            gap: 5px;
         }
         
         .cliente-actions {
             display: flex;
-            gap: 5px;
+            gap: 4px;
         }
         
         .editar-cliente-btn, .eliminar-cliente-btn {
             border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
+            padding: 4px 8px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 0.8em;
+            font-size: 0.75em;
             font-weight: 600;
         }
         
@@ -1572,211 +825,36 @@
         
         .cliente-empty {
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 15px;
             color: #7f8c8d;
             font-style: italic;
         }
         
-        /* Responsive para sistema de clientes potenciales */
-        @media (max-width: 768px) {
-            .section-header {
-                flex-direction: column;
-                gap: 10px;
-                align-items: flex-start;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-            
-            .cliente-info {
-                grid-template-columns: 1fr;
-                gap: 5px;
-            }
-            
-            .cliente-header {
-                flex-direction: column;
-                gap: 5px;
-                align-items: flex-start;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .formulario-cliente {
-                padding: 15px;
-            }
-            
-            .cliente-potencial-card {
-                padding: 12px;
-            }
-            
-            .cliente-tags {
-                gap: 3px;
-            }
-            
-            .cliente-tag {
-                font-size: 0.65em;
-                padding: 1px 5px;
-            }
-            
-            .desarrollo-content {
-                padding: 25px 20px;
-                margin: 0 15px;
-            }
-            
-            .desarrollo-content h3 {
-                font-size: 1.2em;
-            }
-            
-            .desarrollo-icon {
-                font-size: 3em;
-                margin-bottom: 15px;
-            }
-            
-            .desarrollo-content p {
-                font-size: 0.9em;
-            }
-        }
-        
-        /* Responsive para nuevas secciones */
-        @media (max-width: 768px) {
-            .perfil-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .recursos-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .recurso-card {
-                padding: 15px;
-            }
-            
-            .recurso-icon {
-                width: 40px;
-                height: 40px;
-                font-size: 1.3em;
-            }
-            
-            .recurso-info h4 {
-                font-size: 0.95em;
-            }
-            
-            .recurso-info p {
-                font-size: 0.85em;
-            }
-            
-            .cliente-ideal-container {
-                gap: 20px;
-            }
-            
-            .perfil-section {
-                padding: 15px;
-            }
-            
-            .recursos-container {
-                gap: 25px;
-            }
-        }
-        .loading::after { 
-            content: ''; 
-            display: inline-block; 
-            width: 25px; 
-            height: 25px; 
-            border: 4px solid rgba(0,0,0,0.1); 
-            border-top-color: var(--primary-color); 
-            border-radius: 50%; 
-            animation: spin 1s linear infinite; 
-            margin-left: 15px; 
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .error-message { 
-            background: #f8d7da; 
-            color: #721c24; 
-            padding: 15px; 
-            border-radius: 8px; 
-            text-align: center; 
-        }
-        .search-box { 
-            position: relative; 
-            padding-bottom: 20px; 
-        }
-        .search-input { 
-            width: 100%; 
-            padding: 15px 20px 15px 50px; 
-            border: 2px solid var(--border-color); 
-            border-radius: 12px; 
-            font-size: 1em; 
-        }
-        .search-input:focus { 
-            outline: none; 
-            border-color: var(--primary-color); 
-        }
-        .search-box::before { 
-            content: '🔍'; 
-            position: absolute; 
-            left: 20px; 
-            top: 15px; 
-            color: #aaa; 
-            font-size: 1.2em; 
-            pointer-events: none; 
-        }
-        .search-results { 
-            position: absolute; 
-            top: 90%; 
-            left: 0; 
-            right: 0; 
-            background: var(--light-color); 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
-            max-height: 400px; 
-            overflow-y: auto; 
-            z-index: 200; 
-            display: none; 
-        }
-        .search-results.active { 
-            display: block; 
-        }
-        .search-result-item { 
-            padding: 12px 15px; 
-            border-bottom: 1px solid #f1f3f4; 
-            cursor: pointer; 
-        }
-        .search-result-item:hover {
-            background-color: var(--bg-color);
-        }
-        .search-result-category {
-            font-size: 0.8em;
-            color: var(--primary-color);
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        mark { 
-            background: #fff3cd; 
-        }
+        /* TABS MEJORADOS PARA MÓVIL */
         .tabs { 
             display: flex; 
             border-bottom: 2px solid var(--border-color); 
-            margin-bottom: 20px;
-            overflow-x: auto; /* Scroll horizontal en móvil */
+            margin-bottom: 15px;
+            overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .tabs::-webkit-scrollbar {
+            display: none;
         }
         .tab { 
-            padding: 15px 20px; 
+            padding: 10px 16px; 
             background: none; 
             border: none; 
             cursor: pointer; 
             font-weight: 600; 
-            font-size: 1em; 
+            font-size: 0.85em; 
             color: #7f8c8d; 
             position: relative;
-            white-space: nowrap; /* Evita que el texto se rompa */
-            flex-shrink: 0; /* Evita que se compriman demasiado */
-            min-width: max-content; /* Asegura ancho mínimo */
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: max-content;
         }
         .tab:after { 
             content: ''; 
@@ -1798,48 +876,52 @@
         .script-card { 
             background: var(--bg-color); 
             border: 1px solid var(--border-color); 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 15px;
+            border-radius: 10px; 
+            padding: 15px; 
+            margin-bottom: 12px;
             transition: background-color 0.5s ease;
         }
         .script-title { 
             font-weight: 600; 
-            font-size: 1.1em; 
+            font-size: 1em; 
             color: var(--dark-color); 
             display: flex; 
             align-items: center; 
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .script-text { 
-            line-height: 1.6; 
-            margin: 15px 0; 
+            line-height: 1.5; 
+            margin: 12px 0; 
             white-space: pre-line; 
+            font-size: 0.9em;
         }
         .script-badge { 
-            padding: 4px 10px; 
-            border-radius: 12px; 
-            font-size: 0.75em; 
+            padding: 3px 8px; 
+            border-radius: 10px; 
+            font-size: 0.7em; 
             color: var(--white-color); 
         }
         .usage-stats { 
             display: flex; 
-            gap: 15px; 
-            font-size: 0.8em; 
+            gap: 12px; 
+            font-size: 0.75em; 
             color: #7f8c8d; 
+            flex-wrap: wrap;
         }
         .script-actions { 
-            margin-top: 15px; 
+            margin-top: 12px; 
         }
         .copy-btn { 
             background: var(--primary-color); 
             color: var(--white-color); 
             border: none; 
-            padding: 10px 20px; 
-            border-radius: 8px; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
             cursor: pointer; 
             font-weight: 600; 
             transition: background-color 0.3s ease;
+            font-size: 0.85em;
         }
         .copy-btn.copied { 
             background: var(--success-color); 
@@ -1852,51 +934,54 @@
             justify-content: space-around; 
             background: var(--dark-color); 
             color: white; 
-            padding: 20px; 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .stats-item { 
             text-align: center; 
         }
         .stats-number { 
-            font-size: 2em; 
+            font-size: 1.5em; 
             font-weight: 700; 
         }
         .stats-label { 
-            font-size: 0.9em; 
+            font-size: 0.8em; 
             opacity: 0.8; 
         }
         .admin-controls { 
             display: grid; 
-            grid-template-columns: 1fr 1.2fr; 
-            gap: 25px; 
+            grid-template-columns: 1fr; 
+            gap: 20px; 
         }
         .form-group label { 
             display: block; 
             font-weight: 600; 
-            margin-bottom: 8px; 
+            margin-bottom: 6px; 
         }
         .form-group select, .form-group input, .form-group textarea { 
             width: 100%; 
-            padding: 12px; 
+            padding: 10px; 
             border: 2px solid var(--border-color); 
-            border-radius: 8px; 
-            font-size: 1em; 
+            border-radius: 6px; 
+            font-size: 0.9em; 
             font-family: 'Inter', sans-serif;
         }
         .form-group textarea { 
-            height: 150px; 
+            height: 120px; 
             resize: vertical; 
         }
         .admin-btn { 
-            padding: 12px 25px; 
-            border-radius: 8px; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
             cursor: pointer; 
             font-weight: 600; 
             border: none; 
             transition: all 0.2s ease; 
-            margin-right: 10px;
+            margin-right: 8px;
+            font-size: 0.9em;
         }
         .admin-btn.success { 
             background-color: var(--success-color); 
@@ -1907,30 +992,31 @@
             color: white; 
         }
         .scripts-list { 
-            max-height: 500px; 
+            max-height: 400px; 
             overflow-y: auto; 
         }
         .script-item { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            padding: 15px; 
+            padding: 12px; 
             background: var(--bg-color); 
-            border-radius: 8px; 
-            margin-bottom: 10px; 
+            border-radius: 6px; 
+            margin-bottom: 8px; 
         }
         .script-item h4 {
             margin: 0;
             flex: 1;
+            font-size: 0.9em;
         }
         .script-item-actions button { 
             color: white; 
-            font-size: 0.9em; 
-            padding: 8px 15px; 
+            font-size: 0.8em; 
+            padding: 6px 12px; 
             border: none; 
-            border-radius: 6px; 
+            border-radius: 4px; 
             cursor: pointer; 
-            margin-left: 5px; 
+            margin-left: 4px; 
         }
         .edit-btn { 
             background: var(--info-color); 
@@ -1956,37 +1042,39 @@
         }
         .auth-modal { 
             background: var(--light-color); 
-            border-radius: 16px; 
-            padding: 40px; 
+            border-radius: 12px; 
+            padding: 30px; 
             width: 90%; 
-            max-width: 400px; 
+            max-width: 350px; 
             text-align: center; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2); 
         }
         .auth-error { 
             background: #f8d7da; 
             color: #721c24; 
-            padding: 10px; 
-            border-radius: 8px; 
-            margin-bottom: 15px; 
+            padding: 8px; 
+            border-radius: 6px; 
+            margin-bottom: 12px; 
             display: none; 
+            font-size: 0.85em;
         }
         .auth-input { 
             width: 100%; 
-            padding: 15px; 
-            margin-bottom: 10px; 
+            padding: 12px; 
+            margin-bottom: 8px; 
             border: 2px solid var(--border-color); 
-            border-radius: 8px; 
-            font-size: 1em; 
+            border-radius: 6px; 
+            font-size: 0.9em; 
         }
         .connection-status { 
             position: fixed; 
-            bottom: 10px; 
-            right: 10px; 
-            padding: 8px 15px; 
-            border-radius: 20px; 
+            bottom: 8px; 
+            right: 8px; 
+            padding: 6px 12px; 
+            border-radius: 15px; 
             z-index: 1000; 
             font-weight: 600; 
+            font-size: 0.8em;
         }
         .connection-status.online { 
             background: #d4edda; 
@@ -2000,10 +1088,11 @@
             display: none; 
         }
         .alert { 
-            padding: 12px; 
-            border-radius: 6px; 
-            margin-bottom: 15px; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 12px; 
             font-weight: bold; 
+            font-size: 0.9em;
         }
         .alert.success { 
             background: #d4edda; 
@@ -2013,77 +1102,58 @@
             background: #f8d7da; 
             color: #721c24; 
         }
-        @media (max-width: 992px) { 
-            .admin-controls { 
-                grid-template-columns: 1fr; 
-            }
-            .semaforo-container {
-                grid-template-columns: 1fr; /* Una columna en tablets */
-                gap: 15px;
-            }
+        
+        .loading::after { 
+            content: ''; 
+            display: inline-block; 
+            width: 20px; 
+            height: 20px; 
+            border: 3px solid rgba(0,0,0,0.1); 
+            border-top-color: var(--primary-color); 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin-left: 10px; 
         }
-        @media (max-width: 768px) { 
-            .stats-bar { 
-                flex-direction: column; 
-                gap: 15px; 
-            }
-            .semaforo-container {
-                grid-template-columns: 1fr; /* Una columna en móvil */
-                gap: 15px;
-            }
-            .semaforo-light {
-                min-height: 160px;
-                padding: 20px;
-            }
-            .semaforo-light::after {
-                display: none; /* Ocultar tooltip en móviles */
-            }
-            .tabs {
-                border-bottom: 1px solid var(--border-color);
-                margin-bottom: 15px;
-                gap: 5px; /* Espacio entre tabs en móvil */
-            }
-            .tab {
-                padding: 12px 16px;
-                font-size: 0.9em;
-                min-width: auto;
-            }
-            .panel {
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-            .panel h2 {
-                font-size: 1.2em;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-            }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-message { 
+            background: #f8d7da; 
+            color: #721c24; 
+            padding: 12px; 
+            border-radius: 6px; 
+            text-align: center; 
+            font-size: 0.9em;
         }
         
-        /* Estilos adicionales para móviles muy pequeños */
+        /* RESPONSIVE MEJORADO */
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            .header h1 { font-size: 2.5em; }
+            .header p { font-size: 1.1em; }
+            .panel { padding: 25px; }
+            .panel h2 { font-size: 1.4em; }
+            .mode-btn { padding: 10px 25px; font-size: 1em; }
+            .semaforo-container { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+            .semaforo-light { min-height: 200px; padding: 25px; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+            .cliente-info { grid-template-columns: 1fr 1fr; }
+            .admin-controls { grid-template-columns: 1fr 1.2fr; }
+            .stats-bar { padding: 20px; }
+            .stats-number { font-size: 2em; }
+            .decision-matrix { grid-template-columns: 1fr 1fr 1fr; }
+            .search-input { padding: 15px 20px 15px 50px; font-size: 1em; }
+            .search-box::before { left: 20px; top: 15px; font-size: 1.2em; }
+        }
+        
         @media (max-width: 480px) {
-            .header h1 {
-                font-size: 2em;
-            }
-            .header p {
-                font-size: 1em;
-            }
-            .tab {
-                padding: 10px 14px;
-                font-size: 0.85em;
-            }
-            .semaforo-light {
-                min-height: 140px;
-                padding: 15px;
-            }
-            .semaforo-title {
-                font-size: 1.1em;
-            }
-            .semaforo-description {
-                font-size: 0.9em;
-            }
-            .semaforo-list li {
-                font-size: 0.85em;
-            }
+            body { padding: 5px; }
+            .header h1 { font-size: 1.8em; }
+            .panel { padding: 15px; }
+            .semaforo-light { min-height: 140px; padding: 15px; }
+            .semaforo-title { font-size: 1.1em; }
+            .tab { padding: 8px 12px; font-size: 0.8em; }
+            .form-actions { flex-direction: column; }
+            .proceso-footer { flex-direction: column; text-align: center; }
+            .section-header { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
@@ -2319,31 +1389,31 @@
                 </div>
             </div>
 
-            <!-- 👤 PERFIL DE CLIENTE IDEAL -->
+            <!-- 👤 PERFILES DE CLIENTES IDEALES -->
             <div class="panel">
-                <h2>👤 Base de Conocimiento de Clientes</h2>
+                <h2>👤 Base de Conocimiento - Perfiles de Clientes Ideales</h2>
                 <div class="cliente-ideal-container">
                     <div class="perfil-section neutral">
                         <div class="section-header">
-                            <h3>⚠️ Cliente POTENCIAL (Base de Conocimiento)</h3>
-                            <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Cliente Potencial</button>
+                            <h3>🎯 Perfiles de Clientes IDEALES (Base de Conocimiento)</h3>
+                            <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Perfil Ideal</button>
                         </div>
                         <p class="section-description">
-                            <strong>💡 Propósito:</strong> Documenta clientes potenciales identificados por el equipo para análisis y aprendizaje conjunto.
+                            <strong>💡 Propósito:</strong> Documenta perfiles de clientes ideales identificados por el equipo. Estos son arquetipos de clientes que han funcionado bien históricamente para que todos puedan consultarlos y aprender.
                         </p>
                         
-                        <!-- Formulario para agregar/editar cliente -->
+                        <!-- Formulario para agregar/editar perfil ideal -->
                         <div class="formulario-cliente" id="formularioCliente" style="display: none;">
                             <div class="form-header">
-                                <h4 id="tituloFormulario">➕ Agregar Nuevo Cliente Potencial</h4>
+                                <h4 id="tituloFormulario">➕ Agregar Nuevo Perfil de Cliente Ideal</h4>
                                 <button class="cerrar-form-btn" onclick="cerrarFormularioCliente()">✖️</button>
                             </div>
                             <form id="clienteForm">
                                 <input type="hidden" id="clienteId" value="">
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>Nombre del Cliente/Empresa</label>
-                                        <input type="text" id="clienteNombre" required placeholder="Ej: Restaurante El Buen Sabor">
+                                        <label>Nombre del Perfil/Arquetipo</label>
+                                        <input type="text" id="clienteNombre" required placeholder="Ej: Restaurante Familiar Exitoso">
                                     </div>
                                     <div class="form-group">
                                         <label>Tipo de Negocio</label>
@@ -2360,25 +1430,25 @@
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>Contacto</label>
-                                        <input type="text" id="clienteContacto" placeholder="Nombre del contacto">
+                                        <label>Contacto Típico (Cargo/Rol)</label>
+                                        <input type="text" id="clienteContacto" placeholder="Ej: Dueño/Gerente General">
                                     </div>
                                     <div class="form-group">
-                                        <label>Teléfono</label>
-                                        <input type="tel" id="clienteTelefono" placeholder="+504 1234-5678">
+                                        <label>Ubicación/Zona Típica</label>
+                                        <input type="text" id="clienteTelefono" placeholder="Ej: Zona comercial céntrica">
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>¿Qué lo hace POTENCIAL? (Características observadas)</label>
-                                    <textarea id="clienteCaracteristicas" required placeholder="Ej: Negocio nuevo con 3 meses, tiene presupuesto pero limitado, está comparando varias opciones..."></textarea>
+                                    <label>Características que los hacen IDEALES</label>
+                                    <textarea id="clienteCaracteristicas" required placeholder="Ej: Negocio establecido +2 años, entienden el valor de la imagen, toman decisiones rápidas, invierten en calidad..."></textarea>
                                 </div>
                                 <div class="form-group">
-                                    <label>Necesidad Identificada</label>
-                                    <textarea id="clienteNecesidad" required placeholder="Ej: Necesita rótulo para fachada, mencionó que quiere algo 'no muy caro pero que se vea bien'..."></textarea>
+                                    <label>Qué tipo de publicidad necesitan típicamente</label>
+                                    <textarea id="clienteNecesidad" required placeholder="Ej: Rótulo de fachada de calidad, material POP para promociones, banners estacionales..."></textarea>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>Presupuesto Estimado</label>
+                                        <label>Rango de Presupuesto Típico</label>
                                         <select id="clientePresupuesto">
                                             <option value="">No especificado</option>
                                             <option value="bajo">Bajo ($500 - $2,000)</option>
@@ -2387,173 +1457,40 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Urgencia</label>
+                                        <label>Ciclo de Decisión</label>
                                         <select id="clienteUrgencia">
-                                            <option value="">No especificada</option>
-                                            <option value="baja">Baja (Sin prisa)</option>
-                                            <option value="media">Media (1-2 meses)</option>
-                                            <option value="alta">Alta (Menos de 1 mes)</option>
+                                            <option value="">No especificado</option>
+                                            <option value="baja">Lento (Planifican con tiempo)</option>
+                                            <option value="media">Normal (1-2 meses)</option>
+                                            <option value="alta">Rápido (Deciden pronto)</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Próximos Pasos Sugeridos</label>
-                                    <textarea id="clienteProximosPasos" placeholder="Ej: Llamar en 2 semanas, enviar portfolio de trabajos similares, preguntar sobre timeline específico..."></textarea>
+                                    <label>Mejores Estrategias de Approach</label>
+                                    <textarea id="clienteProximosPasos" placeholder="Ej: Mostrar portfolio similar, enfocarse en calidad y durabilidad, ofrecer garantía extendida..."></textarea>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>Vendedor que lo Identificó</label>
+                                        <label>Vendedor que Identificó el Perfil</label>
                                         <input type="text" id="clienteVendedor" placeholder="Nombre del vendedor">
                                     </div>
                                     <div class="form-group">
-                                        <label>Fecha de Contacto</label>
+                                        <label>Fecha de Documentación</label>
                                         <input type="date" id="clienteFecha">
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" class="guardar-cliente-btn">💾 Guardar Cliente</button>
+                                    <button type="submit" class="guardar-cliente-btn">💾 Guardar Perfil</button>
                                     <button type="button" class="cancelar-btn" onclick="cerrarFormularioCliente()">❌ Cancelar</button>
                                 </div>
                             </form>
                         </div>
 
-                        <!-- Lista dinámica de clientes potenciales -->
+                        <!-- Lista dinámica de perfiles ideales -->
                         <div class="clientes-potenciales-lista" id="clientesPotencialesList">
-                            <div class="loading">Cargando clientes potenciales...</div>
+                            <div class="loading">Cargando perfiles de clientes ideales...</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🛠️ RECURSOS Y HERRAMIENTAS -->
-            <div class="panel recursos-panel">
-                <h2>🛠️ Recursos y Herramientas</h2>
-                <div class="recursos-container">
-                    <div class="recursos-section">
-                        <h3>📊 Calculadoras y Precios</h3>
-                        <div class="recursos-grid">
-                            <div class="recurso-card calculadora">
-                                <div class="recurso-icon">🧮</div>
-                                <div class="recurso-info">
-                                    <h4>Calculadora de Precios</h4>
-                                    <p>Cálculo rápido de costos por m² y tipo de material</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                            <div class="recurso-card lista-precios">
-                                <div class="recurso-icon">💰</div>
-                                <div class="recurso-info">
-                                    <h4>Lista de Precios 2024</h4>
-                                    <p>Tarifario actualizado por producto y servicio</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                            <div class="recurso-card descuentos">
-                                <div class="recurso-icon">🎯</div>
-                                <div class="recurso-info">
-                                    <h4>Tabla de Descuentos</h4>
-                                    <p>Descuentos por volumen y tipo de cliente</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="recursos-section">
-                        <h3>📋 Documentos y Templates</h3>
-                        <div class="recursos-grid">
-                            <div class="recurso-card cotizacion">
-                                <div class="recurso-icon">📄</div>
-                                <div class="recurso-info">
-                                    <h4>Template de Cotización</h4>
-                                    <p>Formato estándar para propuestas comerciales</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                            <div class="recurso-card contrato">
-                                <div class="recurso-icon">📝</div>
-                                <div class="recurso-info">
-                                    <h4>Contrato Tipo</h4>
-                                    <p>Modelo de contrato con términos y condiciones</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                            <div class="recurso-card portfolio">
-                                <div class="recurso-icon">🎨</div>
-                                <div class="recurso-info">
-                                    <h4>Portfolio Digital</h4>
-                                    <p>Galería de trabajos recientes por categoría</p>
-                                </div>
-                                <div class="recurso-arrow">→</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="recursos-section">
-                        <h3>🔗 Enlaces Útiles</h3>
-                        <div class="recursos-grid">
-                            <div class="recurso-card whatsapp">
-                                <div class="recurso-icon">📱</div>
-                                <div class="recurso-info">
-                                    <h4>WhatsApp Business</h4>
-                                    <p>Línea principal para clientes</p>
-                                </div>
-                                <div class="recurso-arrow">↗</div>
-                            </div>
-                            <div class="recurso-card drive">
-                                <div class="recurso-icon">☁️</div>
-                                <div class="recurso-info">
-                                    <h4>Drive Compartido</h4>
-                                    <p>Archivos y recursos del equipo de ventas</p>
-                                </div>
-                                <div class="recurso-arrow">↗</div>
-                            </div>
-                            <div class="recurso-card catalogo">
-                                <div class="recurso-icon">📚</div>
-                                <div class="recurso-info">
-                                    <h4>Catálogo Digital</h4>
-                                    <p>Productos y servicios con especificaciones</p>
-                                </div>
-                                <div class="recurso-arrow">↗</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="recursos-section">
-                        <h3>📞 Contactos Importantes</h3>
-                        <div class="recursos-grid">
-                            <div class="recurso-card contacto">
-                                <div class="recurso-icon">👨‍💼</div>
-                                <div class="recurso-info">
-                                    <h4>Gerencia Comercial</h4>
-                                    <p>+504 1234-5678 | gerencia@dpi.com</p>
-                                </div>
-                            </div>
-                            <div class="recurso-card contacto">
-                                <div class="recurso-icon">🏭</div>
-                                <div class="recurso-info">
-                                    <h4>Producción</h4>
-                                    <p>+504 8765-4321 | produccion@dpi.com</p>
-                                </div>
-                            </div>
-                            <div class="recurso-card contacto">
-                                <div class="recurso-icon">🚚</div>
-                                <div class="recurso-info">
-                                    <h4>Instalaciones</h4>
-                                    <p>+504 9999-1111 | instalacion@dpi.com</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Overlay de "En desarrollo" -->
-                <div class="desarrollo-overlay">
-                    <div class="desarrollo-content">
-                        <div class="desarrollo-icon">🚧</div>
-                        <h3>Sección en Desarrollo</h3>
-                        <p>Los recursos y herramientas estarán disponibles próximamente.</p>
-                        <p class="desarrollo-subtitle">Mientras tanto, puedes usar el sistema de scripts y calificación de clientes.</p>
                     </div>
                 </div>
             </div>
@@ -2565,20 +1502,19 @@
     </div>
 
     <script>
-        // ✅ CONFIGURACIÓN - URLs relativas funcionan perfectamente
+        // ✅ CONFIGURACIÓN
         const API_BASE_URL = '';
         
         let SCRIPTS_DATA = {};
         let currentEditingId = null;
         let isAuthenticated = false;
-        let debounceTimer = null; // ✅ Inicialización corregida
-        let connectionInterval = null; // ✅ Para poder limpiar el intervalo
-        let CLIENTES_POTENCIALES = []; // ✅ Array para clientes potenciales
-        let currentEditingClienteId = null; // ✅ Para edición de clientes
+        let debounceTimer = null;
+        let connectionInterval = null;
+        let CLIENTES_POTENCIALES = [];
+        let currentEditingClienteId = null;
 
-        // ✅ FUNCIÓN DE ALERTAS MEJORADA
+        // ✅ FUNCIÓN DE ALERTAS
         function showAlert(message, type = 'success', containerId = 'alertContainer') {
-            // Buscar contenedor, si no existe intentar crear uno o usar mainContent
             let container = document.getElementById(containerId);
             if (!container) {
                 container = document.getElementById('mainContent');
@@ -2590,7 +1526,6 @@
             alertEl.textContent = message;
             container.prepend(alertEl);
             
-            // Auto-remover después de 4 segundos
             setTimeout(() => {
                 if (alertEl.parentNode) {
                     alertEl.remove();
@@ -2598,11 +1533,11 @@
             }, 4000);
         }
 
-        // ✅ LLAMADAS A API MEJORADAS
+        // ✅ LLAMADAS A API
         async function apiCall(endpoint, options = {}) {
             try {
                 const url = `${API_BASE_URL}${endpoint}`;
-                console.log('API Call:', url); // Para debugging
+                console.log('API Call:', url);
                 
                 const response = await fetch(url, {
                     ...options,
@@ -2638,7 +1573,7 @@
             }
         }
         
-        // ✅ CARGA DE DATOS MEJORADA
+        // ✅ CARGA DE DATOS
         async function fetchAllData() {
             const container = document.getElementById('scriptsContainer');
             if (container) {
@@ -2662,8 +1597,29 @@
                 }
             }
         }
+
+        // ✅ CARGA DE CLIENTES POTENCIALES
+        async function cargarClientesPotenciales() {
+            try {
+                const data = await apiCall('/api/clientes-potenciales');
+                CLIENTES_POTENCIALES = data;
+                renderClientesPotenciales();
+            } catch (error) {
+                console.error('Error al cargar perfiles de clientes ideales:', error);
+                const container = document.getElementById('clientesPotencialesList');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="error-message">
+                            ❌ Error al cargar perfiles: ${error.message}
+                            <br><br>
+                            <button onclick="cargarClientesPotenciales()" class="copy-btn">🔄 Reintentar</button>
+                        </div>
+                    `;
+                }
+            }
+        }
         
-        // ✅ AUTENTICACIÓN MEJORADA
+        // ✅ AUTENTICACIÓN
         function handleAuth(e) {
             e.preventDefault();
             const username = document.getElementById('authUsername')?.value;
@@ -2687,7 +1643,6 @@
                 }
                 switchMode('admin', true);
                 
-                // Limpiar formulario
                 document.getElementById('authForm')?.reset();
                 if (errorEl) errorEl.style.display = 'none';
             } else {
@@ -2705,7 +1660,6 @@
             if (overlay) overlay.classList.remove('active');
             if (mainContent) mainContent.style.filter = 'none';
             
-            // Limpiar formulario
             document.getElementById('authForm')?.reset();
             const errorEl = document.getElementById('authError');
             if (errorEl) errorEl.style.display = 'none';
@@ -2726,7 +1680,7 @@
             }
         }
 
-        // ✅ CAMBIO DE MODO MEJORADO
+        // ✅ CAMBIO DE MODO
         function switchMode(mode, fromAuth = false) {
             const ventasMode = document.getElementById('ventasMode');
             const adminMode = document.getElementById('adminMode');
@@ -2737,7 +1691,6 @@
                 return; 
             }
             
-            // Remover clase active de todos los botones
             modeButtons.forEach(btn => btn.classList.remove('active'));
             
             if (mode === 'ventas') {
@@ -2752,7 +1705,7 @@
             }
         }
 
-        // ✅ RENDERIZADO DE UI MEJORADO
+        // ✅ RENDERIZADO DE UI
         function renderVentasUI() {
             const tabsContainer = document.getElementById('categoryTabs');
             const scriptsContainer = document.getElementById('scriptsContainer');
@@ -2771,14 +1724,12 @@
             };
             
             Object.keys(categoryNames).forEach((category, index) => {
-                // Crear tab
                 const tab = document.createElement('button');
                 tab.className = `tab ${index === 0 ? 'active' : ''}`;
                 tab.textContent = categoryNames[category];
                 tab.onclick = (e) => showTab(category, e.target);
                 tabsContainer.appendChild(tab);
                 
-                // Crear sección
                 const section = document.createElement('div');
                 section.id = category;
                 section.className = `tab-section ${index > 0 ? 'hidden' : ''}`;
@@ -2793,7 +1744,7 @@
             });
         }
         
-        // ✅ CREACIÓN DE CARDS MEJORADA
+        // ✅ CREACIÓN DE CARDS
         function createScriptCardHTML(script) {
             const badgeHTML = script.badge ? 
                 `<span class="script-badge" style="background-color: ${script.badge.color || '#6c757d'}">
@@ -2818,22 +1769,18 @@
             `;
         }
         
-        // ✅ NAVEGACIÓN ENTRE TABS MEJORADA
+        // ✅ NAVEGACIÓN ENTRE TABS
         function showTab(category, clickedTab) {
-            // Remover active de todos los tabs
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            // Ocultar todas las secciones
             document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
             
-            // Activar tab clickeado
             if (clickedTab) clickedTab.classList.add('active');
             
-            // Mostrar sección correspondiente
             const section = document.getElementById(category);
             if (section) section.classList.remove('hidden');
         }
 
-        // ✅ ESTADO DEL SISTEMA MEJORADO
+        // ✅ ESTADO DEL SISTEMA
         function updateSystemStatus() {
             const totalCount = SCRIPTS_DATA ? 
                 Object.values(SCRIPTS_DATA).reduce((sum, cat) => 
@@ -2847,7 +1794,7 @@
             }
         }
 
-        // ✅ ESTADO DE CONEXIÓN MEJORADO
+        // ✅ ESTADO DE CONEXIÓN
         function updateConnectionStatus(isOnline) {
             const statusEl = document.getElementById('connectionStatus');
             const headerStatus = document.getElementById('systemStatus');
@@ -2865,7 +1812,7 @@
             }
         }
         
-        // ✅ COPIAR Y RASTREAR MEJORADO
+        // ✅ COPIAR Y RASTREAR
         async function copyAndTrack(scriptId) {
             const card = document.querySelector(`.script-card[data-script-id="${scriptId}"]`);
             if (!card) return;
@@ -2880,7 +1827,6 @@
             try {
                 await navigator.clipboard.writeText(text);
                 
-                // Feedback visual
                 const originalText = button.textContent;
                 button.textContent = '✅ Copiado';
                 button.classList.add('copied');
@@ -2890,7 +1836,6 @@
                     button.classList.remove('copied');
                 }, 2000);
                 
-                // Rastrear uso (sin bloquear la UI si falla)
                 try {
                     await apiCall(`/api/scripts/${scriptId}/track`, { method: 'POST' });
                 } catch (trackError) {
@@ -2903,12 +1848,419 @@
             }
         }
 
-        // ✅ CARGA DE DATOS ADMIN MEJORADA
+        // ✅ FUNCIONES DEL PROCESO DE PRE-CALIFICACIÓN
+        function iniciarProceso() {
+            const procesoPanel = document.getElementById('procesoPanel');
+            if (procesoPanel) {
+                procesoPanel.style.display = 'block';
+                
+                setTimeout(() => {
+                    procesoPanel.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+                
+                showAlert('🎯 Proceso de calificación iniciado. Sigue cada etapa en orden.', 'success');
+            }
+        }
+        
+        function cerrarProceso() {
+            const procesoPanel = document.getElementById('procesoPanel');
+            if (procesoPanel) {
+                procesoPanel.style.display = 'none';
+                showAlert('📋 Proceso de calificación cerrado', 'success');
+            }
+        }
+        
+        function irACategoria(categoria) {
+            cerrarProceso();
+            
+            const tabs = Array.from(document.querySelectorAll('.tab'));
+            const targetTab = tabs.find(tab => {
+                const tabText = tab.textContent.toLowerCase();
+                return tabText.includes(categoria);
+            });
+            
+            if (targetTab) {
+                showTab(categoria, targetTab);
+                
+                setTimeout(() => {
+                    document.getElementById('categoryTabs').scrollIntoView({ 
+                        behavior: 'smooth' 
+                    });
+                }, 100);
+                
+                showAlert(`📝 Mostrando scripts de ${getCategoryName(categoria)}`, 'success');
+            }
+        }
+        
+        function tomarDecision(decision) {
+            const messages = {
+                'verde': {
+                    title: '🟢 DECISIÓN: PROCEDER A COTIZACIÓN',
+                    message: 'Cliente calificado correctamente. Puedes invertir tiempo en una cotización formal.',
+                    category: 'cierre'
+                },
+                'amarillo': {
+                    title: '🟡 DECISIÓN: INVESTIGAR MÁS',
+                    message: 'Cliente necesita más calificación. Programa una segunda llamada con preguntas específicas.',
+                    category: 'calificacion'
+                },
+                'rojo': {
+                    title: '🔴 DECISIÓN: PAUSAR PROCESO',
+                    message: 'Cliente no calificado. No inviertas tiempo en cotización. Usa scripts básicos.',
+                    category: 'bienvenida'
+                }
+            };
+            
+            const msg = messages[decision];
+            showAlert(msg.message, decision === 'verde' ? 'success' : 'error');
+            
+            if (confirm(`${msg.title}\n\n${msg.message}\n\n¿Quieres ver los scripts recomendados para esta situación?`)) {
+                irACategoria(msg.category);
+            } else {
+                cerrarProceso();
+            }
+        }
+
+        // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
+        function renderClientesPotenciales() {
+            const container = document.getElementById('clientesPotencialesList');
+            if (!container) return;
+            
+            if (CLIENTES_POTENCIALES.length === 0) {
+                container.innerHTML = `
+                    <div class="cliente-empty">
+                        📚 No hay perfiles de clientes ideales documentados.<br>
+                        ¡Agrega el primer perfil usando el botón de arriba!
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = CLIENTES_POTENCIALES.map(cliente => createClienteCard(cliente)).join('');
+        }
+        
+        function createClienteCard(cliente) {
+            const tipoLabels = {
+                restaurante: "🍽️ Restaurante",
+                retail: "🏪 Retail", 
+                servicios: "💼 Servicios",
+                clinica: "🏥 Clínica",
+                empresa: "🏢 Empresa",
+                otro: "📋 Otro"
+            };
+            
+            const presupuestoLabels = {
+                bajo: "Bajo ($500-$2K)",
+                medio: "Medio ($2K-$5K)", 
+                alto: "Alto ($5K+)"
+            };
+            
+            const urgenciaLabels = {
+                baja: "Planifican con tiempo",
+                media: "Decisión normal",
+                alta: "Decisión rápida"
+            };
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            return `
+                <div class="cliente-potencial-card">
+                    <div class="cliente-header">
+                        <div class="cliente-nombre">${cliente.nombre}</div>
+                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
+                    </div>
+                    
+                    <div class="cliente-info">
+                        <div class="cliente-field">
+                            <strong>Contacto típico:</strong> ${cliente.contacto || 'No especificado'}
+                        </div>
+                        <div class="cliente-field">
+                            <strong>Ubicación típica:</strong> ${cliente.telefono || 'No especificado'}
+                        </div>
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>Características que los hacen IDEALES:</strong><br>
+                        ${cliente.caracteristicas}
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>Tipo de publicidad que necesitan:</strong><br>
+                        ${cliente.necesidad}
+                    </div>
+                    
+                    ${proximosPasos ? `
+                        <div class="cliente-descripcion">
+                            <strong>Mejores estrategias de approach:</strong><br>
+                            ${proximosPasos}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="cliente-tags">
+                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                    </div>
+                    
+                    <div class="cliente-footer">
+                        <div>
+                            <strong>Documentado por:</strong> ${cliente.vendedor || 'No especificado'} | 
+                            <strong>Fecha:</strong> ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'No especificada'}
+                        </div>
+                        <div class="cliente-actions">
+                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
+                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function abrirFormularioCliente() {
+            const formulario = document.getElementById('formularioCliente');
+            const titulo = document.getElementById('tituloFormulario');
+            
+            if (formulario && titulo) {
+                document.getElementById('clienteForm').reset();
+                document.getElementById('clienteId').value = '';
+                currentEditingClienteId = null;
+                
+                titulo.textContent = '➕ Agregar Nuevo Perfil de Cliente Ideal';
+                formulario.style.display = 'block';
+                
+                setTimeout(() => {
+                    formulario.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+                
+                showAlert('📝 Formulario abierto. Documenta un perfil de cliente ideal para el equipo.', 'success');
+            }
+        }
+        
+        function cerrarFormularioCliente() {
+            const formulario = document.getElementById('formularioCliente');
+            if (formulario) {
+                formulario.style.display = 'none';
+                currentEditingClienteId = null;
+            }
+        }
+        
+        function editarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) {
+                showAlert('Cliente no encontrado', 'error');
+                return;
+            }
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('clienteNombre').value = cliente.nombre;
+            document.getElementById('clienteTipo').value = cliente.tipo;
+            document.getElementById('clienteContacto').value = cliente.contacto || '';
+            document.getElementById('clienteTelefono').value = cliente.telefono || '';
+            document.getElementById('clienteCaracteristicas').value = cliente.caracteristicas;
+            document.getElementById('clienteNecesidad').value = cliente.necesidad;
+            document.getElementById('clientePresupuesto').value = cliente.presupuesto || '';
+            document.getElementById('clienteUrgencia').value = cliente.urgencia || '';
+            document.getElementById('clienteProximosPasos').value = proximosPasos || '';
+            document.getElementById('clienteVendedor').value = cliente.vendedor || '';
+            document.getElementById('clienteFecha').value = fechaContacto || '';
+            
+            currentEditingClienteId = id;
+            
+            const formulario = document.getElementById('formularioCliente');
+            const titulo = document.getElementById('tituloFormulario');
+            
+            if (formulario && titulo) {
+                titulo.textContent = `✏️ Editando: ${cliente.nombre}`;
+                formulario.style.display = 'block';
+                
+                setTimeout(() => {
+                    formulario.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        async function eliminarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            try {
+                await apiCall(`/api/clientes-potenciales/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                });
+                
+                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                renderClientesPotenciales();
+                showAlert('Cliente eliminado exitosamente', 'success');
+                
+            } catch (error) {
+                showAlert(`Error al eliminar cliente: ${error.message}`, 'error');
+            }
+        }
+
+        // ✅ BÚSQUEDA
+        function performSearch(query) {
+            const resultsContainer = document.getElementById('searchResults');
+            if (!resultsContainer) return;
+            
+            resultsContainer.innerHTML = `<div class="loading" style="padding:10px;">Buscando...</div>`;
+            resultsContainer.classList.add('active');
+            
+            if (window.searchController) {
+                window.searchController.abort();
+            }
+            
+            window.searchController = new AbortController();
+            
+            apiCall(`/api/scripts/search?q=${encodeURIComponent(query)}`, {
+                signal: window.searchController.signal
+            })
+                .then(results => {
+                    if (!results || !Array.isArray(results)) {
+                        resultsContainer.innerHTML = `<div class="search-result-item error-message">Error en formato de respuesta</div>`;
+                        return;
+                    }
+                    
+                    if (results.length > 0) {
+                        resultsContainer.innerHTML = results.map(result => `
+                            <div class="search-result-item" onclick="scrollToScript(${result.id})">
+                                <div class="search-result-category">${getCategoryName(result.category)}</div>
+                                <div>${result.highlightedTitle}</div>
+                                <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 5px;">${result.highlightedText || ''}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        resultsContainer.innerHTML = `
+                            <div class="search-result-item" style="text-align: center; color: #7f8c8d;">
+                                🔍 No se encontraron resultados para "${query}"
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError') return;
+                    
+                    resultsContainer.innerHTML = `
+                        <div class="search-result-item error-message">
+                            ❌ Error en la búsqueda: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+        
+        function getCategoryName(category) {
+            const categoryNames = {
+                bienvenida: "💬 Bienvenida", 
+                calificacion: "🔍 Calificación", 
+                objeciones: "🛡️ Objeciones", 
+                seguimiento: "📞 Seguimiento", 
+                cierre: "🎯 Cierre"
+            };
+            return categoryNames[category] || category;
+        }
+
+        function scrollToScript(id) {
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.classList.remove('active');
+            }
+            
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            const card = document.querySelector(`.script-card[data-script-id="${id}"]`);
+            if (!card) {
+                showAlert('Script no encontrado en la vista actual', 'error');
+                return;
+            }
+            
+            let categoryKey = null;
+            for (const category in SCRIPTS_DATA) {
+                if (SCRIPTS_DATA[category].some(s => s.id == id)) {
+                    categoryKey = category;
+                    break;
+                }
+            }
+            
+            if (categoryKey) {
+                const tabs = Array.from(document.querySelectorAll('.tab'));
+                const targetTab = tabs.find(tab => {
+                    const tabText = tab.textContent.toLowerCase();
+                    return tabText.includes(categoryKey) || 
+                           tabText.includes(getCategoryName(categoryKey).toLowerCase());
+                });
+                
+                if (targetTab) {
+                    showTab(categoryKey, targetTab);
+                }
+            }
+            
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                card.style.transition = 'background-color 0.5s ease';
+                card.style.backgroundColor = '#fff3cd';
+                
+                setTimeout(() => {
+                    card.style.backgroundColor = '';
+                }, 2000);
+            }, 100);
+        }
+
+        // ✅ MANEJO DEL SEMÁFORO
+        function handleSemaforoClick(color) {
+            const categoryMap = {
+                'verde': 'cierre',
+                'amarillo': 'calificacion',
+                'rojo': 'bienvenida'
+            };
+            
+            const targetCategory = categoryMap[color];
+            
+            const messages = {
+                'verde': '🟢 Cliente LISTO para cotizar → Ir a scripts de CIERRE',
+                'amarillo': '🟡 Cliente necesita INVESTIGACIÓN → Ir a scripts de CALIFICACIÓN', 
+                'rojo': '🔴 Cliente PROBLEMÁTICO → Usar scripts básicos de BIENVENIDA'
+            };
+            
+            showAlert(messages[color], 'success');
+            
+            setTimeout(() => {
+                const tabs = Array.from(document.querySelectorAll('.tab'));
+                const targetTab = tabs.find(tab => {
+                    const tabText = tab.textContent.toLowerCase();
+                    return tabText.includes(targetCategory);
+                });
+                
+                if (targetTab) {
+                    showTab(targetCategory, targetTab);
+                    
+                    setTimeout(() => {
+                        document.getElementById('categoryTabs').scrollIntoView({ 
+                            behavior: 'smooth' 
+                        });
+                    }, 100);
+                }
+            }, 1500);
+        }
+
+        // ✅ CARGA DE DATOS ADMIN
         function loadAdminData() {
             const adminContainer = document.getElementById('adminMode');
             if (!adminContainer) return;
             
-            // Solo crear el HTML si no existe
             if (!adminContainer.querySelector('.admin-controls')) {
                 adminContainer.innerHTML = `
                     <div class="panel stats-bar" id="statsBar">
@@ -2962,18 +2314,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="panel">
-                        <h2>💾 Gestión de Backups</h2>
-                        <div id="backup-controls">
-                            <button class="admin-btn success" onclick="downloadBackup()">📥 Descargar Backup</button>
-                            <input type="file" id="restoreFile" class="hidden" accept=".db" onchange="restoreFromBackup(this.files[0])">
-                            <button class="admin-btn danger" onclick="document.getElementById('restoreFile').click()">🔧 Restaurar desde Archivo</button>
-                        </div>
-                    </div>
                 `;
                 
-                // ✅ ASIGNAR LISTENERS SOLO UNA VEZ
                 const scriptForm = document.getElementById('scriptForm');
                 if (scriptForm) {
                     scriptForm.addEventListener('submit', handleAdminFormSubmit);
@@ -2985,7 +2327,6 @@
                 }
             }
             
-            // Poblar selects y cargar datos
             populateCategorySelect('scriptCategory');
             populateCategorySelect('filterCategory');
             renderAdminList();
@@ -2993,18 +2334,14 @@
             updateAdminStats();
         }
 
-        // ✅ POBLAR SELECTS MEJORADO
+        // ✅ POBLAR SELECTS
         function populateCategorySelect(selectId) {
             const select = document.getElementById(selectId);
             if (!select) return;
             
-            // Guardar valor actual
             const currentValue = select.value;
-            
-            // Limpiar opciones
             select.innerHTML = '';
             
-            // Agregar opción "Todas" solo para filtro
             if (selectId === 'filterCategory') {
                 select.innerHTML = `<option value="all">Todas las categorías</option>`;
             } else {
@@ -3023,13 +2360,12 @@
                 select.innerHTML += `<option value="${key}">${categoryNames[key]}</option>`;
             });
             
-            // Restaurar valor si era válido
             if (currentValue && (currentValue === 'all' || categoryNames[currentValue])) {
                 select.value = currentValue;
             }
         }
-        
-        // ✅ RENDERIZADO LISTA ADMIN MEJORADO
+
+        // ✅ RENDERIZADO LISTA ADMIN
         function renderAdminList() {
             const listContainer = document.getElementById('scriptsList');
             const filterSelect = document.getElementById('filterCategory');
@@ -3053,7 +2389,6 @@
                     if (SCRIPTS_DATA[category] && SCRIPTS_DATA[category].length > 0) {
                         hasScripts = true;
                         
-                        // Agregar header de categoría si mostramos todas
                         if (filter === 'all') {
                             listContainer.innerHTML += `
                                 <div style="margin: 20px 0 10px 0; font-weight: 600; color: var(--primary-color);">
@@ -3088,8 +2423,8 @@
                 `;
             }
         }
-        
-        // ✅ MANEJO DE FORMULARIO ADMIN MEJORADO
+
+        // ✅ MANEJO DE FORMULARIO ADMIN
         async function handleAdminFormSubmit(e) {
             e.preventDefault();
             
@@ -3102,7 +2437,6 @@
                 return;
             }
             
-            // Validaciones
             const category = categoryEl.value.trim();
             const title = titleEl.value.trim();
             const text = textEl.value.trim();
@@ -3143,7 +2477,7 @@
                 showAlert(`Script ${action} exitosamente`, 'success');
                 
                 clearForm();
-                await fetchAllData(); // Recargar todos los datos
+                await fetchAllData();
                 renderAdminList();
                 updateAdminStats();
                 
@@ -3152,12 +2486,11 @@
             }
         }
 
-        // ✅ EDICIÓN MEJORADA
+        // ✅ EDICIÓN
         function editScript(id) {
             let scriptToEdit = null;
             let categoryKey = null;
             
-            // Buscar el script en todas las categorías
             for (const category in SCRIPTS_DATA) {
                 const found = SCRIPTS_DATA[category].find(s => s.id === id);
                 if (found) {
@@ -3172,10 +2505,8 @@
                 return;
             }
             
-            // Actualizar estado
             currentEditingId = id;
             
-            // Actualizar UI
             const formTitle = document.getElementById('formTitle');
             const categorySelect = document.getElementById('scriptCategory');
             const titleInput = document.getElementById('scriptTitle');
@@ -3186,15 +2517,13 @@
             if (titleInput) titleInput.value = scriptToEdit.title;
             if (textArea) textArea.value = scriptToEdit.text;
             
-            // Scroll al formulario
             if (formTitle) {
                 formTitle.scrollIntoView({ behavior: 'smooth' });
             }
         }
-        
-        // ✅ ELIMINACIÓN MEJORADA
+
+        // ✅ ELIMINACIÓN
         async function deleteScript(id) {
-            // Buscar el script para mostrar su título
             let scriptTitle = `ID ${id}`;
             for (const category in SCRIPTS_DATA) {
                 const found = SCRIPTS_DATA[category].find(s => s.id === id);
@@ -3215,7 +2544,7 @@
                 });
                 
                 showAlert('Script eliminado exitosamente', 'success');
-                await fetchAllData(); // Recargar todos los datos
+                await fetchAllData();
                 renderAdminList();
                 updateAdminStats();
                 
@@ -3224,7 +2553,7 @@
             }
         }
 
-        // ✅ LIMPIAR FORMULARIO MEJORADO
+        // ✅ LIMPIAR FORMULARIO
         function clearForm() {
             currentEditingId = null;
             
@@ -3234,14 +2563,13 @@
             if (form) form.reset();
             if (formTitle) formTitle.textContent = '➕ Agregar Script';
             
-            // Limpiar alertas
             const alertContainer = document.getElementById('alertContainer');
             if (alertContainer) {
                 alertContainer.innerHTML = '';
             }
         }
 
-        // ✅ ANALYTICS MEJORADO
+        // ✅ ANALYTICS
         async function loadAnalyticsDashboard() {
             const container = document.getElementById('analyticsContainer');
             if (!container) return;
@@ -3255,7 +2583,6 @@
                 
                 let html = '<div style="display: grid; gap: 20px;">';
                 
-                // Top Scripts
                 html += '<div><h4>🏆 Scripts Más Usados (30 días)</h4>';
                 if (data.topScripts && data.topScripts.length > 0) {
                     data.topScripts.forEach((script, index) => {
@@ -3271,7 +2598,6 @@
                 }
                 html += '</div>';
                 
-                // Category Stats
                 html += '<div><h4>📊 Uso por Categoría (30 días)</h4>';
                 if (data.categoryStats && data.categoryStats.length > 0) {
                     const categoryNames = {
@@ -3308,7 +2634,7 @@
             }
         }
 
-        // ✅ ESTADÍSTICAS ADMIN MEJORADAS
+        // ✅ ESTADÍSTICAS ADMIN
         function updateAdminStats() {
             const statsBar = document.getElementById('statsBar');
             if (!statsBar) return;
@@ -3339,289 +2665,8 @@
                 </div>
             `;
         }
-        
-        // ✅ BACKUPS MEJORADOS
-        async function downloadBackup() {
-            try {
-                const blob = await apiCall('/api/backup', { 
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                });
-                
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `dpi-backup-${new Date().toISOString().split('T')[0]}.db`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                showAlert('Backup descargado exitosamente', 'success');
-                
-            } catch (error) {
-                showAlert(`Error al descargar backup: ${error.message}`, 'error');
-            }
-        }
-        
-        async function restoreFromBackup(file) {
-            if (!file) return;
-            
-            if (!file.name.endsWith('.db')) {
-                showAlert('Por favor selecciona un archivo .db válido', 'error');
-                return;
-            }
-            
-            const confirmMessage = `🚨 ADVERTENCIA IMPORTANTE 🚨
 
-¿Estás completamente seguro de que quieres restaurar desde este backup?
-
-Esta acción:
-• Reemplazará TODA la base de datos actual
-• Eliminará todos los scripts existentes
-• No se puede deshacer
-
-Archivo: ${file.name}
-Tamaño: ${(file.size / 1024).toFixed(2)} KB
-
-¿Continuar con la restauración?`;
-            
-            if (!confirm(confirmMessage)) {
-                // Limpiar el input file
-                const fileInput = document.getElementById('restoreFile');
-                if (fileInput) fileInput.value = '';
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('backup', file);
-            
-            try {
-                const result = await apiCall('/api/restore', { 
-                    method: 'POST', 
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' }, 
-                    body: formData 
-                });
-                
-                showAlert(result.message || 'Restauración exitosa', 'success');
-                
-                // Esperar un poco y recargar la página
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-                
-            } catch (error) {
-                showAlert(`Error al restaurar backup: ${error.message}`, 'error');
-            } finally {
-                // Limpiar el input file
-                const fileInput = document.getElementById('restoreFile');
-                if (fileInput) fileInput.value = '';
-            }
-        }
-        
-        // ✅ BÚSQUEDA MEJORADA
-        function performSearch(query) {
-            const resultsContainer = document.getElementById('searchResults');
-            if (!resultsContainer) return;
-            
-            resultsContainer.innerHTML = `<div class="loading" style="padding:10px;">Buscando...</div>`;
-            resultsContainer.classList.add('active');
-            
-            // Cancelar búsqueda anterior si existe
-            if (window.searchController) {
-                window.searchController.abort();
-            }
-            
-            // Crear nuevo AbortController para esta búsqueda
-            window.searchController = new AbortController();
-            
-            apiCall(`/api/scripts/search?q=${encodeURIComponent(query)}`, {
-                signal: window.searchController.signal
-            })
-                .then(results => {
-                    if (!results || !Array.isArray(results)) {
-                        resultsContainer.innerHTML = `<div class="search-result-item error-message">Error en formato de respuesta</div>`;
-                        return;
-                    }
-                    
-                    if (results.length > 0) {
-                        resultsContainer.innerHTML = results.map(result => `
-                            <div class="search-result-item" onclick="scrollToScript(${result.id})">
-                                <div class="search-result-category">${getCategoryName(result.category)}</div>
-                                <div>${result.highlightedTitle}</div>
-                                <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 5px;">${result.highlightedText || ''}</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        resultsContainer.innerHTML = `
-                            <div class="search-result-item" style="text-align: center; color: #7f8c8d;">
-                                🔍 No se encontraron resultados para "${query}"
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    if (error.name === 'AbortError') return; // Búsqueda cancelada
-                    
-                    resultsContainer.innerHTML = `
-                        <div class="search-result-item error-message">
-                            ❌ Error en la búsqueda: ${error.message}
-                        </div>
-                    `;
-                });
-        }
-        
-        function getCategoryName(category) {
-            const categoryNames = {
-                bienvenida: "💬 Bienvenida", 
-                calificacion: "🔍 Calificación", 
-                objeciones: "🛡️ Objeciones", 
-                seguimiento: "📞 Seguimiento", 
-                cierre: "🎯 Cierre"
-            };
-            return categoryNames[category] || category;
-        }
-        
-        // ✅ MANEJO DEL SEMÁFORO DE CALIFICACIÓN MEJORADO
-        function handleSemaforoClick(color) {
-            const categoryMap = {
-                'verde': 'cierre',      // Cliente listo → Scripts de cierre
-                'amarillo': 'calificacion', // Necesita investigación → Scripts de calificación
-                'rojo': 'bienvenida'    // Cliente problemático → Scripts básicos de bienvenida
-            };
-            
-            const targetCategory = categoryMap[color];
-            
-            // Mensajes más específicos con recomendaciones
-            const messages = {
-                'verde': '🟢 Cliente CALIFICADO → Procede a cotizar. Te llevo a scripts de CIERRE.',
-                'amarillo': '🟡 Cliente PARCIALMENTE calificado → Necesita más investigación. Te llevo a scripts de CALIFICACIÓN.', 
-                'rojo': '🔴 Cliente NO calificado → Alto riesgo. Te llevo a scripts básicos de BIENVENIDA.'
-            };
-            
-            showAlert(messages[color], color === 'verde' ? 'success' : 'error');
-            
-            // Preguntar si quiere usar el proceso completo
-            const useProcess = confirm(`${messages[color]}\n\n¿Prefieres usar el PROCESO COMPLETO de calificación paso a paso?`);
-            
-            if (useProcess) {
-                iniciarProceso();
-            } else {
-                // Navegar directamente a la categoría
-                setTimeout(() => {
-                    const tabs = Array.from(document.querySelectorAll('.tab'));
-                    const targetTab = tabs.find(tab => {
-                        const tabText = tab.textContent.toLowerCase();
-                        return tabText.includes(targetCategory);
-                    });
-                    
-                    if (targetTab) {
-                        showTab(targetCategory, targetTab);
-                        
-                        setTimeout(() => {
-                            document.getElementById('categoryTabs').scrollIntoView({ 
-                                behavior: 'smooth' 
-                            });
-                        }, 100);
-                    }
-                }, 1000);
-            }
-        }
-        function scrollToScript(id) {
-            const searchResults = document.getElementById('searchResults');
-            if (searchResults) {
-                searchResults.classList.remove('active');
-            }
-            
-            // Limpiar input de búsqueda
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            const card = document.querySelector(`.script-card[data-script-id="${id}"]`);
-            if (!card) {
-                showAlert('Script no encontrado en la vista actual', 'error');
-                return;
-            }
-            
-            // Encontrar la categoría del script
-            let categoryKey = null;
-            for (const category in SCRIPTS_DATA) {
-                if (SCRIPTS_DATA[category].some(s => s.id == id)) {
-                    categoryKey = category;
-                    break;
-                }
-            }
-            
-            if (categoryKey) {
-                // Cambiar a la tab correcta
-                const tabs = Array.from(document.querySelectorAll('.tab'));
-                const targetTab = tabs.find(tab => {
-                    const tabText = tab.textContent.toLowerCase();
-                    return tabText.includes(categoryKey) || 
-                           tabText.includes(getCategoryName(categoryKey).toLowerCase());
-                });
-                
-                if (targetTab) {
-                    showTab(categoryKey, targetTab);
-                }
-            }
-            
-            // Scroll y highlight después de un pequeño delay
-            setTimeout(() => {
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // Efecto de highlight
-                card.style.transition = 'background-color 0.5s ease';
-                card.style.backgroundColor = '#fff3cd';
-                
-                setTimeout(() => {
-                    card.style.backgroundColor = '';
-                }, 2000);
-            }, 100);
-        }
-
-        // ✅ MANEJO DEL SEMÁFORO DE CALIFICACIÓN
-        function handleSemaforoClick(color) {
-            const categoryMap = {
-                'verde': 'cierre',      // Cliente listo → Scripts de cierre
-                'amarillo': 'calificacion', // Necesita investigación → Scripts de calificación
-                'rojo': 'bienvenida'    // Cliente problemático → Scripts básicos de bienvenida
-            };
-            
-            const targetCategory = categoryMap[color];
-            
-            // Mostrar feedback visual
-            const messages = {
-                'verde': '🟢 Cliente LISTO para cotizar → Ir a scripts de CIERRE',
-                'amarillo': '🟡 Cliente necesita INVESTIGACIÓN → Ir a scripts de CALIFICACIÓN', 
-                'rojo': '🔴 Cliente PROBLEMÁTICO → Usar scripts básicos de BIENVENIDA'
-            };
-            
-            showAlert(messages[color], 'success');
-            
-            // Navegar a la categoría correspondiente después de un pequeño delay
-            setTimeout(() => {
-                const tabs = Array.from(document.querySelectorAll('.tab'));
-                const targetTab = tabs.find(tab => {
-                    const tabText = tab.textContent.toLowerCase();
-                    return tabText.includes(targetCategory);
-                });
-                
-                if (targetTab) {
-                    showTab(targetCategory, targetTab);
-                    
-                    // Scroll suave hacia los scripts
-                    setTimeout(() => {
-                        document.getElementById('categoryTabs').scrollIntoView({ 
-                            behavior: 'smooth' 
-                        });
-                    }, 100);
-                }
-            }, 1500);
-        }
-
-        // ✅ INICIALIZACIÓN MEJORADA
+        // ✅ INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Iniciando DPI Sistema de Ventas...');
             console.log('🌐 API Base URL:', API_BASE_URL);
@@ -3636,7 +2681,6 @@ Tamaño: ${(file.size / 1024).toFixed(2)} KB
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
-                    // Limpiar timer anterior
                     if (debounceTimer) {
                         clearTimeout(debounceTimer);
                     }
@@ -3667,15 +2711,72 @@ Tamaño: ${(file.size / 1024).toFixed(2)} KB
                 }
             });
 
+            // Agregar listener para formulario de clientes
+            const clienteForm = document.getElementById('clienteForm');
+            if (clienteForm) {
+                clienteForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const clienteData = {
+                        nombre: document.getElementById('clienteNombre').value.trim(),
+                        tipo: document.getElementById('clienteTipo').value,
+                        contacto: document.getElementById('clienteContacto').value.trim(),
+                        telefono: document.getElementById('clienteTelefono').value.trim(),
+                        caracteristicas: document.getElementById('clienteCaracteristicas').value.trim(),
+                        necesidad: document.getElementById('clienteNecesidad').value.trim(),
+                        presupuesto: document.getElementById('clientePresupuesto').value,
+                        urgencia: document.getElementById('clienteUrgencia').value,
+                        proximosPasos: document.getElementById('clienteProximosPasos').value.trim(),
+                        vendedor: document.getElementById('clienteVendedor').value.trim(),
+                        fecha: document.getElementById('clienteFecha').value
+                    };
+                    
+                    if (!clienteData.nombre || !clienteData.tipo || !clienteData.caracteristicas || !clienteData.necesidad) {
+                        showAlert('Por favor completa todos los campos obligatorios', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        if (currentEditingClienteId) {
+                            await apiCall(`/api/clientes-potenciales/${currentEditingClienteId}`, { 
+                                method: 'PUT', 
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer DPI2025Admin' 
+                                },
+                                body: JSON.stringify(clienteData) 
+                            });
+                            showAlert('Cliente actualizado exitosamente', 'success');
+                        } else {
+                            await apiCall('/api/clientes-potenciales', { 
+                                method: 'POST', 
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer DPI2025Admin' 
+                                },
+                                body: JSON.stringify(clienteData) 
+                            });
+                            showAlert('Cliente potencial agregado exitosamente', 'success');
+                        }
+                        
+                        await cargarClientesPotenciales();
+                        cerrarFormularioCliente();
+                        
+                    } catch (error) {
+                        showAlert(`Error al guardar cliente: ${error.message}`, 'error');
+                    }
+                });
+            }
+            
             // Cargar datos iniciales
             fetchAllData();
+            cargarClientesPotenciales();
             
             // Configurar monitoreo de conexión
             connectionInterval = setInterval(() => {
                 updateConnectionStatus(navigator.onLine);
             }, 10000);
             
-            // Listener para cambios de conectividad
             window.addEventListener('online', () => updateConnectionStatus(true));
             window.addEventListener('offline', () => updateConnectionStatus(false));
             
