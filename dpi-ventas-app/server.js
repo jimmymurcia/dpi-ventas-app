@@ -330,7 +330,7 @@ app.get('/api/scripts', (req, res) => {
 });
 
 // Crear nuevo script
-app.post('/api/scripts', (req, res) => {
+app.post('/api/scripts', requireAuth, (req, res) => {
     const { category, title, text } = req.body;
     
     if (!category || !title || !text) {
@@ -356,7 +356,7 @@ app.post('/api/scripts', (req, res) => {
 });
 
 // Actualizar script
-app.put('/api/scripts/:id', (req, res) => {
+app.put('/api/scripts/:id', requireAuth, (req, res) => {
     const { id } = req.params;
     const { category, title, text } = req.body;
     
@@ -385,7 +385,7 @@ app.put('/api/scripts/:id', (req, res) => {
 });
 
 // Eliminar script
-app.delete('/api/scripts/:id', (req, res) => {
+app.delete('/api/scripts/:id', requireAuth, (req, res) => {
     const { id } = req.params;
     
     const query = 'DELETE FROM scripts WHERE id = ?';
