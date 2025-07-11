@@ -541,7 +541,235 @@
             font-size: 0.9em;
         }
         
-        /* 📝 CLIENTES POTENCIALES */
+        /* 🔍 FILTROS DE CLIENTES IDEALES */
+        .filtros-cliente {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .filtro-grupo {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filtro-grupo label {
+            font-weight: 600;
+            font-size: 0.85em;
+            color: var(--dark-color);
+        }
+        
+        .filtro-grupo select {
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 0.85em;
+            background: white;
+        }
+        
+        .perfil-count {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* 📋 CARDS COMPACTAS DE PERFILES */
+        .perfil-card-compacta {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .perfil-card-compacta:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+        }
+        
+        .perfil-card-compacta.expandida {
+            border-color: var(--primary-color);
+            box-shadow: 0 6px 20px rgba(15, 167, 149, 0.15);
+        }
+        
+        .perfil-header-compacto {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .perfil-nombre-compacto {
+            font-weight: 700;
+            color: var(--dark-color);
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .perfil-tipo-compacto {
+            background: var(--warning-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        
+        .perfil-resumen {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .perfil-resumen-item {
+            font-size: 0.85em;
+        }
+        
+        .perfil-resumen-item strong {
+            color: var(--primary-color);
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .perfil-tags-compacto {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .perfil-tag-compacto {
+            background: var(--info-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+        
+        .perfil-tag-compacto.presupuesto-bajo { background: #6c757d; }
+        .perfil-tag-compacto.presupuesto-medio { background: #ffc107; }
+        .perfil-tag-compacto.presupuesto-alto { background: #28a745; }
+        .perfil-tag-compacto.urgencia-baja { background: #17a2b8; }
+        .perfil-tag-compacto.urgencia-media { background: #fd7e14; }
+        .perfil-tag-compacto.urgencia-alta { background: #dc3545; }
+        
+        .perfil-expandir-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8em;
+        }
+        
+        .perfil-expandir-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .perfil-detalles {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .perfil-detalles.visible {
+            display: block;
+        }
+        
+        .perfil-detalle-item {
+            margin-bottom: 12px;
+            font-size: 0.9em;
+        }
+        
+        .perfil-detalle-item strong {
+            color: var(--primary-color);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .perfil-acciones-compacto {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .perfil-acciones-compacto button {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .perfil-editar-btn {
+            background: var(--info-color);
+            color: white;
+        }
+        
+        .perfil-editar-btn:hover {
+            background: #138496;
+        }
+        
+        .perfil-eliminar-btn {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .perfil-eliminar-btn:hover {
+            background: #c82333;
+        }
+        
+        /* Responsive para filtros */
+        @media (max-width: 768px) {
+            .filtros-cliente {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 12px;
+            }
+            
+            .perfil-resumen {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .perfil-header-compacto {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -1395,12 +1623,46 @@
                 <div class="cliente-ideal-container">
                     <div class="perfil-section neutral">
                         <div class="section-header">
-                            <h3>🎯 Perfiles de Clientes IDEALES (Base de Conocimiento)</h3>
-                            <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Perfil Ideal</button>
+                            <h3>🎯 Perfiles de Clientes IDEALES</h3>
+                            <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Perfil</button>
                         </div>
                         <p class="section-description">
-                            <strong>💡 Propósito:</strong> Documenta perfiles de clientes ideales identificados por el equipo. Estos son arquetipos de clientes que han funcionado bien históricamente para que todos puedan consultarlos y aprender.
+                            <strong>💡 Propósito:</strong> Arquetipos de clientes exitosos para consulta rápida del equipo.
                         </p>
+
+                        <!-- Filtros de búsqueda estratégicos -->
+                        <div class="filtros-cliente">
+                            <div class="filtro-grupo">
+                                <label>🏢 Sector:</label>
+                                <select id="filtroTipo" onchange="filtrarPerfiles()">
+                                    <option value="">Todos los sectores</option>
+                                    <option value="restaurante">🍽️ Restaurantes</option>
+                                    <option value="retail">🏪 Retail/Tiendas</option>
+                                    <option value="servicios">💼 Servicios</option>
+                                    <option value="clinica">🏥 Clínicas</option>
+                                    <option value="empresa">🏢 Empresas</option>
+                                    <option value="otro">📋 Otros</option>
+                                </select>
+                            </div>
+                            <div class="filtro-grupo">
+                                <label>💰 Presupuesto:</label>
+                                <select id="filtroPresupuesto" onchange="filtrarPerfiles()">
+                                    <option value="">Todos los rangos</option>
+                                    <option value="bajo">💵 Bajo ($500-$2K)</option>
+                                    <option value="medio">💴 Medio ($2K-$5K)</option>
+                                    <option value="alto">💸 Alto ($5K+)</option>
+                                </select>
+                            </div>
+                            <div class="filtro-grupo">
+                                <label>⚡ Decisión:</label>
+                                <select id="filtroUrgencia" onchange="filtrarPerfiles()">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="alta">🚀 Decisión Rápida</option>
+                                    <option value="media">⏳ Decisión Normal</option>
+                                    <option value="baja">🤔 Planifican Mucho</option>
+                                </select>
+                            </div>
+                        </div>
                         
                         <!-- Formulario para agregar/editar perfil ideal -->
                         <div class="formulario-cliente" id="formularioCliente" style="display: none;">
@@ -1487,7 +1749,8 @@
                             </form>
                         </div>
 
-                        <!-- Lista dinámica de perfiles ideales -->
+                        <!-- Contador y lista dinámica de perfiles -->
+                        <div class="perfil-count" id="perfilesCount">📊 Cargando perfiles...</div>
                         <div class="clientes-potenciales-lista" id="clientesPotencialesList">
                             <div class="loading">Cargando perfiles de clientes ideales...</div>
                         </div>
@@ -1925,21 +2188,162 @@
         }
 
         // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
+        // ✅ RENDERIZADO COMPACTO DE PERFILES
         function renderClientesPotenciales() {
             const container = document.getElementById('clientesPotencialesList');
             if (!container) return;
             
-            if (CLIENTES_POTENCIALES.length === 0) {
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            // Mostrar contador
+            const countEl = document.getElementById('perfilesCount');
+            if (countEl) {
+                countEl.textContent = `📊 ${perfilesFiltrados.length} perfil${perfilesFiltrados.length !== 1 ? 'es' : ''} encontrado${perfilesFiltrados.length !== 1 ? 's' : ''}`;
+            }
+            
+            if (perfilesFiltrados.length === 0) {
                 container.innerHTML = `
                     <div class="cliente-empty">
-                        📚 No hay perfiles de clientes ideales documentados.<br>
-                        ¡Agrega el primer perfil usando el botón de arriba!
+                        📚 No hay perfiles que coincidan con los filtros.<br>
+                        ${CLIENTES_POTENCIALES.length === 0 ? '¡Agrega el primer perfil usando el botón de arriba!' : 'Prueba ajustando los filtros.'}
                     </div>
                 `;
                 return;
             }
             
-            container.innerHTML = CLIENTES_POTENCIALES.map(cliente => createClienteCard(cliente)).join('');
+            container.innerHTML = perfilesFiltrados.map(cliente => createPerfilCardCompacta(cliente)).join('');
+        }
+        
+        function createPerfilCardCompacta(cliente) {
+            const tipoLabels = {
+                restaurante: "🍽️ Restaurante",
+                retail: "🏪 Retail", 
+                servicios: "💼 Servicios",
+                clinica: "🏥 Clínica",
+                empresa: "🏢 Empresa",
+                otro: "📋 Otro"
+            };
+            
+            const presupuestoLabels = {
+                bajo: "Bajo ($500-$2K)",
+                medio: "Medio ($2K-$5K)", 
+                alto: "Alto ($5K+)"
+            };
+            
+            const urgenciaLabels = {
+                baja: "Planifican",
+                media: "Normal",
+                alta: "Rápidos"
+            };
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            return `
+                <div class="perfil-card-compacta" id="perfil-${cliente.id}">
+                    <div class="perfil-expandir-btn" onclick="togglePerfilDetalle(${cliente.id})">
+                        <span id="expand-icon-${cliente.id}">▶</span>
+                    </div>
+                    
+                    <div class="perfil-header-compacto">
+                        <div class="perfil-nombre-compacto">
+                            ${cliente.nombre}
+                        </div>
+                        <div class="perfil-tipo-compacto">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
+                    </div>
+                    
+                    <div class="perfil-resumen">
+                        <div class="perfil-resumen-item">
+                            <strong>👤 Contacto típico:</strong>
+                            ${cliente.contacto || 'No especificado'}
+                        </div>
+                        <div class="perfil-resumen-item">
+                            <strong>📍 Ubicación típica:</strong>
+                            ${cliente.telefono || 'No especificado'}
+                        </div>
+                    </div>
+                    
+                    <div class="perfil-tags-compacto">
+                        ${cliente.presupuesto ? `<span class="perfil-tag-compacto presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                        ${cliente.urgencia ? `<span class="perfil-tag-compacto urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                        <span class="perfil-tag-compacto">📅 ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'Sin fecha'}</span>
+                    </div>
+                    
+                    <div class="perfil-detalles" id="detalles-${cliente.id}">
+                        <div class="perfil-detalle-item">
+                            <strong>🎯 Características que los hacen IDEALES:</strong>
+                            ${cliente.caracteristicas}
+                        </div>
+                        
+                        <div class="perfil-detalle-item">
+                            <strong>📢 Tipo de publicidad que necesitan:</strong>
+                            ${cliente.necesidad}
+                        </div>
+                        
+                        ${proximosPasos ? `
+                            <div class="perfil-detalle-item">
+                                <strong>💡 Mejores estrategias de approach:</strong>
+                                ${proximosPasos}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="perfil-detalle-item">
+                            <strong>📝 Documentado por:</strong> ${cliente.vendedor || 'No especificado'}
+                        </div>
+                        
+                        <div class="perfil-acciones-compacto">
+                            <button class="perfil-editar-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
+                            <button class="perfil-eliminar-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ✅ FUNCIONES DE FILTRADO
+        function filtrarPerfilesData() {
+            const filtroTipo = document.getElementById('filtroTipo')?.value || '';
+            const filtroPresupuesto = document.getElementById('filtroPresupuesto')?.value || '';
+            const filtroUrgencia = document.getElementById('filtroUrgencia')?.value || '';
+            
+            return CLIENTES_POTENCIALES.filter(cliente => {
+                const cumpleTipo = !filtroTipo || cliente.tipo === filtroTipo;
+                const cumplePresupuesto = !filtroPresupuesto || cliente.presupuesto === filtroPresupuesto;
+                const cumpleUrgencia = !filtroUrgencia || cliente.urgencia === filtroUrgencia;
+                
+                return cumpleTipo && cumplePresupuesto && cumpleUrgencia;
+            });
+        }
+        
+        function filtrarPerfiles() {
+            renderClientesPotenciales();
+        }
+        
+        // ✅ TOGGLE DE DETALLES
+        function togglePerfilDetalle(id) {
+            const detalles = document.getElementById(`detalles-${id}`);
+            const icon = document.getElementById(`expand-icon-${id}`);
+            const card = document.getElementById(`perfil-${id}`);
+            
+            if (detalles && icon && card) {
+                if (detalles.classList.contains('visible')) {
+                    detalles.classList.remove('visible');
+                    icon.textContent = '▶';
+                    card.classList.remove('expandida');
+                } else {
+                    detalles.classList.add('visible');
+                    icon.textContent = '▼';
+                    card.classList.add('expandida');
+                    
+                    // Scroll suave al perfil expandido
+                    setTimeout(() => {
+                        card.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'nearest' 
+                        });
+                    }, 100);
+                }
+            }
         }
         
         function createClienteCard(cliente) {
@@ -2746,7 +3150,7 @@
                                 },
                                 body: JSON.stringify(clienteData) 
                             });
-                            showAlert('Cliente actualizado exitosamente', 'success');
+                            showAlert('Perfil actualizado exitosamente', 'success');
                         } else {
                             await apiCall('/api/clientes-potenciales', { 
                                 method: 'POST', 
@@ -2756,14 +3160,14 @@
                                 },
                                 body: JSON.stringify(clienteData) 
                             });
-                            showAlert('Cliente potencial agregado exitosamente', 'success');
+                            showAlert('Perfil de cliente ideal agregado exitosamente', 'success');
                         }
                         
                         await cargarClientesPotenciales();
                         cerrarFormularioCliente();
                         
                     } catch (error) {
-                        showAlert(`Error al guardar cliente: ${error.message}`, 'error');
+                        showAlert(`Error al guardar perfil: ${error.message}`, 'error');
                     }
                 });
             }
