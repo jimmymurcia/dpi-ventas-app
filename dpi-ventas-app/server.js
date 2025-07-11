@@ -422,6 +422,29 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+// Endpoint para backup manual (protegido)
+app.get('/api/backup', requireAuth, (req, res) => {
+    try {
+        if (!fs.existsSync('./scripts.db')) {
+            return res.status(404).json({ error: 'Base de datos no encontrada' });
+        }
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `dpi-scripts-backup-${timestamp}.db`;
+        
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        const fileStream = fs.createReadStream('./scripts.db');
+        fileStream.pipe(res);
+        
+        console.log(`📥 Backup descargado: ${filename}`);
+    } catch (error) {
+        console.error('Error al crear backup:', error);
+        res.status(500).json({ error: 'Error al crear backup' });
+    }
+});
+
 // Endpoint para listar backups disponibles
 app.get('/api/backups', requireAuth, (req, res) => {
     try {
