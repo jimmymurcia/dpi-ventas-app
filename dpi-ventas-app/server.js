@@ -29,6 +29,7 @@ let db = new sqlite3.Database(dbPath, (err) => {
 
 function initializeDatabase() {
     db.serialize(() => {
+        // Tabla de scripts existente
         db.run(`CREATE TABLE IF NOT EXISTS scripts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
@@ -40,6 +41,7 @@ function initializeDatabase() {
             if (err) console.error('Error al crear tabla scripts:', err.message);
         });
 
+        // Tabla de uso de scripts existente
         db.run(`CREATE TABLE IF NOT EXISTS script_usage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             script_id INTEGER NOT NULL,
@@ -48,8 +50,30 @@ function initializeDatabase() {
         )`, (err) => {
             if (err) console.error('Error al crear tabla script_usage:', err.message);
         });
+
+        // ✅ NUEVA TABLA: Clientes potenciales
+        db.run(`CREATE TABLE IF NOT EXISTS clientes_potenciales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            contacto TEXT,
+            telefono TEXT,
+            caracteristicas TEXT NOT NULL,
+            necesidad TEXT NOT NULL,
+            presupuesto TEXT,
+            urgencia TEXT,
+            proximos_pasos TEXT,
+            vendedor TEXT,
+            fecha_contacto DATE,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+            if (err) console.error('Error al crear tabla clientes_potenciales:', err.message);
+            else console.log('✅ Tabla clientes_potenciales creada/verificada');
+        });
         
         insertInitialScripts();
+        insertInitialClientes();
     });
 }
 
@@ -73,6 +97,57 @@ function insertInitialScripts() {
     });
 }
 
+// ✅ NUEVA FUNCIÓN: Insertar clientes potenciales de ejemplo
+function insertInitialClientes() {
+    const initialClientes = [
+        {
+            nombre: "Restaurante El Buen Sabor",
+            tipo: "restaurante",
+            contacto: "María González",
+            telefono: "+504 9876-5432",
+            caracteristicas: "Negocio nuevo con 3 meses de operación, tiene presupuesto pero limitado, está comparando varias opciones",
+            necesidad: "Necesita rótulo para fachada, mencionó que quiere algo 'no muy caro pero que se vea bien'",
+            presupuesto: "medio",
+            urgencia: "media",
+            proximos_pasos: "Llamar en 2 semanas, enviar portfolio de trabajos similares",
+            vendedor: "Carlos Mendoza",
+            fecha_contacto: "2024-07-01"
+        },
+        {
+            nombre: "Clínica Dental Sonrisas",
+            tipo: "clinica",
+            contacto: "Dr. Roberto Silva",
+            telefono: "+504 2222-3333",
+            caracteristicas: "Clínica establecida pero primera vez invirtiendo en publicidad exterior",
+            necesidad: "Banner para promoción de servicios, material POP para interior",
+            presupuesto: "alto",
+            urgencia: "baja",
+            proximos_pasos: "Reunión programada para mostrar propuesta completa",
+            vendedor: "Ana López",
+            fecha_contacto: "2024-07-05"
+        }
+    ];
+
+    db.get("SELECT COUNT(*) as count FROM clientes_potenciales", (err, row) => {
+        if (err) return console.error('Error al verificar clientes potenciales:', err.message);
+        if (row.count === 0) {
+            console.log('🔄 Insertando clientes potenciales de ejemplo...');
+            const stmt = db.prepare(`INSERT INTO clientes_potenciales 
+                (nombre, tipo, contacto, telefono, caracteristicas, necesidad, presupuesto, urgencia, proximos_pasos, vendedor, fecha_contacto) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+            
+            initialClientes.forEach(cliente => {
+                stmt.run(
+                    cliente.nombre, cliente.tipo, cliente.contacto, cliente.telefono,
+                    cliente.caracteristicas, cliente.necesidad, cliente.presupuesto,
+                    cliente.urgencia, cliente.proximos_pasos, cliente.vendedor, cliente.fecha_contacto
+                );
+            });
+            stmt.finalize(() => console.log('✅ Clientes potenciales de ejemplo insertados.'));
+        }
+    });
+}
+
 // --- AUTH MIDDLEWARE ---
 function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -83,7 +158,7 @@ function requireAuth(req, res, next) {
     }
 }
 
-// --- API ENDPOINTS ---
+// --- API ENDPOINTS SCRIPTS (EXISTENTES) ---
 app.get('/api/scripts', (req, res) => {
     const query = `
         SELECT s.*,
@@ -176,10 +251,120 @@ app.delete('/api/scripts/:id', requireAuth, (req, res) => {
     });
 });
 
+// ✅ NUEVOS ENDPOINTS: Clientes Potenciales
+app.get('/api/clientes-potenciales', (req, res) => {
+    const query = `SELECT * FROM clientes_potenciales ORDER BY created_at DESC`;
+    
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Error al obtener clientes potenciales:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows);
+    });
+});
+
+app.post('/api/clientes-potenciales', requireAuth, (req, res) => {
+    const { 
+        nombre, tipo, contacto, telefono, caracteristicas, 
+        necesidad, presupuesto, urgencia, proximosPasos, vendedor, fecha 
+    } = req.body;
+
+    // Validaciones básicas
+    if (!nombre || !tipo || !caracteristicas || !necesidad) {
+        return res.status(400).json({ 
+            error: 'Los campos nombre, tipo, caracteristicas y necesidad son obligatorios' 
+        });
+    }
+
+    const query = `INSERT INTO clientes_potenciales 
+        (nombre, tipo, contacto, telefono, caracteristicas, necesidad, presupuesto, urgencia, proximos_pasos, vendedor, fecha_contacto) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    db.run(query, [
+        nombre, tipo, contacto || null, telefono || null, caracteristicas,
+        necesidad, presupuesto || null, urgencia || null, proximosPasos || null, 
+        vendedor || null, fecha || null
+    ], function(err) {
+        if (err) {
+            console.error('Error al crear cliente potencial:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ 
+            id: this.lastID,
+            message: 'Cliente potencial creado exitosamente' 
+        });
+    });
+});
+
+app.put('/api/clientes-potenciales/:id', requireAuth, (req, res) => {
+    const { id } = req.params;
+    const { 
+        nombre, tipo, contacto, telefono, caracteristicas, 
+        necesidad, presupuesto, urgencia, proximosPasos, vendedor, fecha 
+    } = req.body;
+
+    // Validaciones básicas
+    if (!nombre || !tipo || !caracteristicas || !necesidad) {
+        return res.status(400).json({ 
+            error: 'Los campos nombre, tipo, caracteristicas y necesidad son obligatorios' 
+        });
+    }
+
+    const query = `UPDATE clientes_potenciales SET 
+        nombre=?, tipo=?, contacto=?, telefono=?, caracteristicas=?, necesidad=?, 
+        presupuesto=?, urgencia=?, proximos_pasos=?, vendedor=?, fecha_contacto=?, 
+        updated_at=CURRENT_TIMESTAMP 
+        WHERE id=?`;
+
+    db.run(query, [
+        nombre, tipo, contacto || null, telefono || null, caracteristicas,
+        necesidad, presupuesto || null, urgencia || null, proximosPasos || null, 
+        vendedor || null, fecha || null, id
+    ], function(err) {
+        if (err) {
+            console.error('Error al actualizar cliente potencial:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Cliente potencial no encontrado' });
+        }
+        
+        res.json({ 
+            changes: this.changes,
+            message: 'Cliente potencial actualizado exitosamente' 
+        });
+    });
+});
+
+app.delete('/api/clientes-potenciales/:id', requireAuth, (req, res) => {
+    const { id } = req.params;
+
+    db.run('DELETE FROM clientes_potenciales WHERE id=?', [id], function(err) {
+        if (err) {
+            console.error('Error al eliminar cliente potencial:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Cliente potencial no encontrado' });
+        }
+        
+        res.json({ 
+            changes: this.changes,
+            message: 'Cliente potencial eliminado exitosamente' 
+        });
+    });
+});
+
+// --- BACKUP Y RESTORE (EXISTENTES) ---
 const upload = multer({ dest: 'uploads/' });
+
 app.get('/api/backup', requireAuth, (req, res) => {
     res.download(dbPath, `backup-${Date.now()}.db`);
 });
+
 app.post('/api/restore', requireAuth, upload.single('backup'), (req, res) => {
     if (!req.file) return res.status(400).json({error: "No file uploaded."});
     db.close(err => {
@@ -194,12 +379,24 @@ app.post('/api/restore', requireAuth, upload.single('backup'), (req, res) => {
     });
 });
 
+// --- RUTA CATCH-ALL PARA SPA ---
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// --- INICIAR SERVIDOR ---
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor DPI ejecutándose en http://localhost:${PORT}`);
+    console.log(`📊 API Scripts: http://localhost:${PORT}/api/scripts`);
+    console.log(`👥 API Clientes: http://localhost:${PORT}/api/clientes-potenciales`);
 });
 
-process.on('SIGINT', () => db.close(() => process.exit(0)));
+// --- GRACEFUL SHUTDOWN ---
+process.on('SIGINT', () => {
+    console.log('\n🔄 Cerrando servidor...');
+    db.close((err) => {
+        if (err) console.error('Error al cerrar base de datos:', err.message);
+        else console.log('✅ Base de datos cerrada correctamente');
+        process.exit(0);
+    });
+});
