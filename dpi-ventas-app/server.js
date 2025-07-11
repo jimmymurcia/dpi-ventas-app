@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(express.json());
@@ -267,7 +267,34 @@ Una vez confirmado iniciamos diseño en las próximas 24 horas 🎨`
     });
 }
 
-// RUTAS DE LA API
+// Middleware de autenticación para rutas administrativas
+function requireAuth(req, res, next) {
+    if (req.method === 'GET') {
+        // Las consultas GET (leer scripts) están permitidas para todos
+        return next();
+    }
+    
+    // Para POST, PUT, DELETE requiere autenticación
+    const authHeader = req.headers.authorization;
+    const validPassword = 'DPI2025Admin'; // Cambia esta contraseña
+    
+    if (!authHeader || authHeader !== `Bearer ${validPassword}`) {
+        return res.status(401).json({ 
+            error: '🔒 Acceso denegado. Se requiere autenticación de administrador.' 
+        });
+    }
+    
+    next();
+}
+
+// Aplicar middleware a rutas de modificación
+app.use('/api/scripts/:id', requireAuth);
+app.use('/api/scripts', (req, res, next) => {
+    if (req.method !== 'GET') {
+        return requireAuth(req, res, next);
+    }
+    next();
+});
 
 // Obtener todos los scripts organizados por categoría
 app.get('/api/scripts', (req, res) => {
@@ -411,6 +438,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor DPI ejecutándose en puerto ${PORT}`);
     console.log(`📱 App disponible en: http://localhost:${PORT}`);
     console.log(`🔗 API disponible en: http://localhost:${PORT}/api/scripts`);
+    console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Manejo de cierre graceful
