@@ -158,29 +158,6 @@
         }
 
         // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
-        async function cargarClientesPotenciales() {
-            const container = document.getElementById('clientesPotencialesList');
-            if (!container) return;
-            
-            container.innerHTML = '<div class="loading">Cargando clientes potenciales...</div>';
-            
-            try {
-                // ✅ USAR API REAL
-                const data = await apiCall('/api/clientes-potenciales');
-                CLIENTES_POTENCIALES = data;
-                renderClientesPotenciales();
-                
-            } catch (error) {
-                container.innerHTML = `
-                    <div class="error-message">
-                        ❌ Error al cargar clientes potenciales: ${error.message}
-                        <br><br>
-                        <button onclick="cargarClientesPotenciales()" class="copy-btn">🔄 Reintentar</button>
-                    </div>
-                `;
-            }
-        }
-        
         function renderClientesPotenciales() {
             const container = document.getElementById('clientesPotencialesList');
             if (!container) return;
@@ -196,6 +173,150 @@
             }
             
             container.innerHTML = CLIENTES_POTENCIALES.map(cliente => createClienteCard(cliente)).join('');
+        }
+        
+        function createClienteCard(cliente) {
+            const tipoLabels = {
+                restaurante: "🍽️ Restaurante",
+                retail: "🏪 Retail", 
+                servicios: "💼 Servicios",
+                clinica: "🏥 Clínica",
+                empresa: "🏢 Empresa",
+                otro: "📋 Otro"
+            };
+            
+            const presupuestoLabels = {
+                bajo: "Bajo ($500-$2K)",
+                medio: "Medio ($2K-$5K)", 
+                alto: "Alto ($5K+)"
+            };
+            
+            const urgenciaLabels = {
+                baja: "Sin prisa",
+                media: "1-2 meses",
+                alta: "< 1 mes"
+            };
+            
+            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            return `
+                <div class="cliente-potencial-card">
+                    <div class="cliente-header">
+                        <div class="cliente-nombre">${cliente.nombre}</div>
+                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
+                    </div>
+                    
+                    <div class="cliente-info">
+                        <div class="cliente-field">
+                            <strong>Contacto:</strong> ${cliente.contacto || 'No especificado'}
+                        </div>
+                        <div class="cliente-field">
+                            <strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}
+                        </div>
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>¿Por qué es potencial?</strong><br>
+                        ${cliente.caracteristicas}
+                    </div>
+                    
+                    <div class="cliente-descripcion">
+                        <strong>Necesidad identificada:</strong><br>
+                        ${cliente.necesidad}
+                    </div>
+                    
+                    ${proximosPasos ? `
+                        <div class="cliente-descripcion">
+                            <strong>Próximos pasos:</strong><br>
+                            ${proximosPasos}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="cliente-tags">
+                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                    </div>
+                    
+                    <div class="cliente-footer">
+                        <div>
+                            <strong>Vendedor:</strong> ${cliente.vendedor || 'No especificado'} | 
+                            <strong>Fecha:</strong> ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'No especificada'}
+                        </div>
+                        <div class="cliente-actions">
+                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
+                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function editarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) {
+                showAlert('Cliente no encontrado', 'error');
+                return;
+            }
+            
+            // ✅ USAR NOMBRES DE CAMPOS DEL BACKEND (snake_case)
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            // Llenar formulario con datos del cliente
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('clienteNombre').value = cliente.nombre;
+            document.getElementById('clienteTipo').value = cliente.tipo;
+            document.getElementById('clienteContacto').value = cliente.contacto || '';
+            document.getElementById('clienteTelefono').value = cliente.telefono || '';
+            document.getElementById('clienteCaracteristicas').value = cliente.caracteristicas;
+            document.getElementById('clienteNecesidad').value = cliente.necesidad;
+            document.getElementById('clientePresupuesto').value = cliente.presupuesto || '';
+            document.getElementById('clienteUrgencia').value = cliente.urgencia || '';
+            document.getElementById('clienteProximosPasos').value = proximosPasos || '';
+            document.getElementById('clienteVendedor').value = cliente.vendedor || '';
+            document.getElementById('clienteFecha').value = fechaContacto || '';
+            
+            currentEditingClienteId = id;
+            
+            // Mostrar formulario
+            const formulario = document.getElementById('formularioCliente');
+            const titulo = document.getElementById('tituloFormulario');
+            
+            if (formulario && titulo) {
+                titulo.textContent = `✏️ Editando: ${cliente.nombre}`;
+                formulario.style.display = 'block';
+                
+                setTimeout(() => {
+                    formulario.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        async function eliminarCliente(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            try {
+                // ✅ USAR API REAL
+                await apiCall(`/api/clientes-potenciales/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                });
+                
+                // Actualizar array local
+                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                renderClientesPotenciales();
+                showAlert('Cliente eliminado exitosamente', 'success');
+                
+            } catch (error) {
+                showAlert(`Error al eliminar cliente: ${error.message}`, 'error');
+            }
         }
         
         function createClienteCard(cliente) {
