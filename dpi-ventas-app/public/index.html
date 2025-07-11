@@ -166,7 +166,7 @@
     </div>
 
     <script>
-        // --- GLOBAL VARIABLES ---
+        // --- GLOBAL VARIABLES & CONFIG ---
         const API_BASE_URL = '';
         let SCRIPTS_DATA = {};
         let currentEditingId = null;
@@ -177,11 +177,11 @@
         function showAlert(message, type = 'success') {
             const container = document.getElementById('alertContainer');
             if (!container) return;
-            const alert = document.createElement('div');
-            alert.className = `alert ${type}`;
-            alert.textContent = message;
-            container.prepend(alert);
-            setTimeout(() => alert.remove(), 4000);
+            const alertEl = document.createElement('div');
+            alertEl.className = `alert ${type}`;
+            alertEl.textContent = message;
+            container.prepend(alertEl);
+            setTimeout(() => alertEl.remove(), 4000);
         }
 
         async function apiCall(endpoint, options = {}) {
@@ -195,22 +195,8 @@
                 return response.headers.get("content-type")?.includes("application/json") ? response.json() : response.blob();
             } catch (error) {
                 updateConnectionStatus(false);
-                console.error(`API call a ${endpoint} falló:`, error);
                 showAlert(`Error de Red: ${error.message}`, 'error');
                 throw error;
-            }
-        }
-        
-        function updateConnectionStatus(isOnline) {
-            const el = document.getElementById('connectionStatus');
-            const headerStatus = document.getElementById('systemStatus');
-            if (el) {
-                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
-                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-            }
-            if (headerStatus) {
-                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
-                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
             }
         }
         
@@ -223,41 +209,7 @@
                 renderVentasUI();
                 updateSystemStatus();
             } catch (error) {
-                if(container) container.innerHTML = `<div class="error-message">No se pudieron cargar los scripts.</div>`;
-            }
-        }
-        
-        // --- AUTHENTICATION ---
-        function showAuthModal() {
-            const overlay = document.getElementById('authOverlay');
-            if (overlay) {
-                overlay.classList.add('active');
-                document.getElementById('mainContent').style.filter = 'blur(5px)';
-                setTimeout(() => document.getElementById('authUsername').focus(), 100);
-            }
-        }
-        function hideAuthModal() {
-            const overlay = document.getElementById('authOverlay');
-            if (overlay) overlay.classList.remove('active');
-            document.getElementById('mainContent').style.filter = 'none';
-        }
-        function cancelAuth() {
-            hideAuthModal();
-            const buttons = document.querySelectorAll('.mode-btn');
-            buttons[0].classList.add('active');
-            buttons[1].classList.remove('active');
-        }
-        function handleAuth(e) {
-            e.preventDefault();
-            const username = document.getElementById('authUsername').value;
-            const password = document.getElementById('authPassword').value;
-            const errorEl = document.getElementById('authError');
-            if (username === 'admin' && password === 'DPI2025Admin') {
-                isAuthenticated = true;
-                hideAuthModal();
-                switchMode('admin', true);
-            } else {
-                if (errorEl) errorEl.style.display = 'block';
+                if(container) container.innerHTML = `<div class="error-message">Fallo al cargar scripts.</div>`;
             }
         }
 
@@ -274,7 +226,6 @@
                 ventasMode.style.display = 'block';
                 adminMode.style.display = 'none';
                 modeButtons[0].classList.add('active');
-                fetchAllData();
             } else {
                 ventasMode.style.display = 'none';
                 adminMode.style.display = 'block';
@@ -287,22 +238,18 @@
             const tabsContainer = document.getElementById('categoryTabs');
             const scriptsContainer = document.getElementById('scriptsContainer');
             if (!tabsContainer || !scriptsContainer) return;
-
             tabsContainer.innerHTML = '';
             scriptsContainer.innerHTML = '';
             const categoryNames = {bienvenida: "💬 Bienvenida", calificacion: "🔍 Calificación", objeciones: "🛡️ Objeciones", seguimiento: "📞 Seguimiento", cierre: "🎯 Cierre"};
-            
             Object.keys(categoryNames).forEach((category, index) => {
                 const tab = document.createElement('button');
                 tab.className = `tab ${index === 0 ? 'active' : ''}`;
                 tab.textContent = categoryNames[category];
                 tab.onclick = (e) => showTab(category, e.target);
                 tabsContainer.appendChild(tab);
-                
                 const section = document.createElement('div');
                 section.id = category;
                 section.className = `tab-section ${index > 0 ? 'hidden' : ''}`;
-                
                 if(SCRIPTS_DATA[category] && SCRIPTS_DATA[category].length > 0) {
                     section.innerHTML = SCRIPTS_DATA[category].map(createScriptCardHTML).join('');
                 } else {
@@ -319,7 +266,7 @@
                     <div class="script-title">${script.title}${badgeHTML}</div>
                     <div class="script-text">${script.text}</div>
                     <div class="usage-stats"><span>📊 ${script.usage_30_days || 0} usos (30d)</span><span>📈 ${script.usage_7_days || 0} usos (7d)</span></div>
-                    <div class="script-actions"><button class="copy-btn" onclick="copyAndTrack(${script.id})">📋 Copiar</button></div>
+                    <button class="copy-btn" onclick="copyAndTrack(${script.id})">📋 Copiar</button>
                 </div>`;
         }
         
@@ -337,6 +284,19 @@
                 statusEl.innerHTML = `✅ Sistema activo - ${totalCount} scripts disponibles - Actualizado: ${new Date().toLocaleTimeString()}`;
             }
         }
+
+        function updateConnectionStatus(isOnline) {
+            const el = document.getElementById('connectionStatus');
+            const headerStatus = document.getElementById('systemStatus');
+            if (el) {
+                el.textContent = isOnline ? '🟢 En línea' : '🔴 Sin conexión';
+                el.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+            }
+            if (headerStatus) {
+                headerStatus.className = `status ${isOnline ? 'online' : 'offline'}`;
+                if (!isOnline) headerStatus.textContent = '🔴 Error de Servidor';
+            }
+        }
         
         async function copyAndTrack(scriptId) {
             const card = document.querySelector(`.script-card[data-script-id="${scriptId}"]`);
@@ -352,11 +312,13 @@
 
         // --- ADMIN FUNCTIONS ---
         function loadAdminData() {
-            loadScriptsListAdmin();
+            populateCategorySelect('scriptCategory');
+            populateCategorySelect('filterCategory');
+            renderAdminList();
             loadAnalyticsDashboard();
             updateAdminStats();
         }
-
+        
         function populateCategorySelect(selectId) {
              const select = document.getElementById(selectId);
              if(!select) return;
@@ -456,18 +418,6 @@
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
             document.getElementById('dbStatus').textContent = '✅';
         }
-        
-        async function loadScriptsListAdmin() {
-            const listContainer = document.getElementById('scriptsList');
-            if (!listContainer) return;
-            listContainer.innerHTML = '<div class="loading"></div>';
-            populateCategorySelect('scriptCategory');
-            populateCategorySelect('filterCategory');
-            await fetchAllData();
-            renderAdminList();
-        }
-
-        document.getElementById('filterCategory')?.addEventListener('change', renderAdminList);
 
         // --- BACKUP & RESTORE ---
         async function downloadBackup() {
