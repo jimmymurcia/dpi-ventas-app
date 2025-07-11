@@ -422,6 +422,156 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
+// Endpoint para listar backups disponibles
+app.get('/api/backups', requireAuth, (req, res) => {
+    try {
+        const backupFiles = fs.readdirSync('./')
+            .filter(file => file.startsWith('backup_') && file.endsWith('.db'))
+            .map(file => {
+                const stats = fs.statSync(file);
+                return {
+                    filename: file,
+                    size: Math.round(stats.size / 1024), // KB
+                    created: stats.mtime.toISOString(),
+                    age: Math.round((Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60)) // horas
+                };
+            })
+            .sort((a, b) => new Date(b.created) - new Date(a.created));
+
+        res.json({
+            backups: backupFiles,
+            total: backupFiles.length,
+            lastBackup: backupFiles[0]?.created || null
+        });
+        
+    } catch (error) {
+        console.error('Error al listar backups:', error);
+        res.status(500).json({ error: 'Error al obtener lista de backups' });
+    }
+});
+
+// Endpoint para descargar backup específico
+app.get('/api/backup/:filename', requireAuth, (req, res) => {
+    try {
+        const filename = req.params.filename;
+        
+        // Validar que es un archivo de backup válido
+        if (!filename.startsWith('backup_') || !filename.endsWith('.db')) {
+            return res.status(400).json({ error: 'Nombre de archivo inválido' });
+        }
+        
+        if (!fs.existsSync(filename)) {
+            return res.status(404).json({ error: 'Backup no encontrado' });
+        }
+        
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        const fileStream = fs.createReadStream(filename);
+        fileStream.pipe(res);
+        
+        console.log(`📥 Backup específico descargado: ${filename}`);
+    } catch (error) {
+        console.error('Error al descargar backup específico:', error);
+        res.status(500).json({ error: 'Error al descargar backup' });
+    }
+});
+
+// Middleware para manejar archivos subidos
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
+// Endpoint para restaurar backup (protegido)
+app.post('/api/restore', requireAuth, upload.single('backup'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se proporcionó archivo de backup' });
+        }
+
+        const backupPath = req.file.path;
+        const currentDbPath = './scripts.db';
+        
+        // Crear backup de seguridad de la BD actual (si existe)
+        if (fs.existsSync(currentDbPath)) {
+            const emergencyBackup = `./emergency_backup_${Date.now()}.db`;
+            fs.copyFileSync(currentDbPath, emergencyBackup);
+            console.log(`🚨 Backup de emergencia creado: ${emergencyBackup}`);
+        }
+        
+        // Restaurar desde el backup subido
+        fs.copyFileSync(backupPath, currentDbPath);
+        
+        // Limpiar archivo temporal
+        fs.unlinkSync(backupPath);
+        
+        console.log('✅ Base de datos restaurada exitosamente');
+        
+        // Verificar integridad de la BD restaurada
+        const testDb = new sqlite3.Database(currentDbPath, (err) => {
+            if (err) {
+                console.error('❌ Error en BD restaurada:', err);
+                return res.status(500).json({ error: 'Backup corrupto o inválido' });
+            }
+            
+            testDb.get("SELECT COUNT(*) as count FROM scripts", (err, row) => {
+                if (err) {
+                    console.error('❌ Error al verificar scripts:', err);
+                    return res.status(500).json({ error: 'Error al verificar BD restaurada' });
+                }
+                
+                testDb.close();
+                res.json({ 
+                    message: '✅ Base de datos restaurada correctamente',
+                    scriptsCount: row.count,
+                    timestamp: new Date().toISOString()
+                });
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error en restauración:', error);
+        res.status(500).json({ error: 'Error durante la restauración' });
+    }
+});
+
+// Endpoint para restaurar desde backup del servidor
+app.post('/api/restore-server-backup', requireAuth, (req, res) => {
+    try {
+        const { filename } = req.body;
+        
+        if (!filename || !filename.startsWith('backup_') || !filename.endsWith('.db')) {
+            return res.status(400).json({ error: 'Nombre de backup inválido' });
+        }
+        
+        if (!fs.existsSync(filename)) {
+            return res.status(404).json({ error: 'Backup no encontrado en servidor' });
+        }
+        
+        const currentDbPath = './scripts.db';
+        
+        // Backup de emergencia
+        if (fs.existsSync(currentDbPath)) {
+            const emergencyBackup = `./emergency_backup_${Date.now()}.db`;
+            fs.copyFileSync(currentDbPath, emergencyBackup);
+            console.log(`🚨 Backup de emergencia creado: ${emergencyBackup}`);
+        }
+        
+        // Restaurar
+        fs.copyFileSync(filename, currentDbPath);
+        
+        console.log(`✅ Restaurado desde: ${filename}`);
+        
+        res.json({ 
+            message: `✅ Base de datos restaurada desde ${filename}`,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error en restauración:', error);
+        res.status(500).json({ error: 'Error durante la restauración' });
+    }
+});
+
 // Ruta principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
