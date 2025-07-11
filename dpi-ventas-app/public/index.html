@@ -3174,6 +3174,63 @@ Generado por DPI Sistema de Ventas
                             <div class="loading">Cargando analytics...</div>
                         </div>
                     </div>
+
+                    <!-- ✅ NUEVA SECCIÓN: Backup y Recovery -->
+                    <div class="panel">
+                        <h2>💾 Backup y Recovery del Sistema</h2>
+                        <div style="background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--warning-color);">
+                            <h4 style="margin: 0 0 10px 0; color: var(--warning-color);">📋 ¿Qué incluye el backup completo?</h4>
+                            <ul style="margin: 0; padding-left: 20px; font-size: 0.9em;">
+                                <li><strong>📝 Scripts de ventas</strong> (todas las categorías y versiones)</li>
+                                <li><strong>📊 Estadísticas de uso</strong> (historial completo de copias)</li>
+                                <li><strong>👥 Perfiles de clientes ideales</strong> (todos los datos completos)</li>
+                                <li><strong>📅 Timestamps</strong> (fechas de creación y modificación)</li>
+                            </ul>
+                        </div>
+
+                        <div style="display: grid; gap: 20px;">
+                            <!-- Sección de Backup -->
+                            <div style="background: var(--bg-color); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color);">
+                                <h3 style="margin: 0 0 15px 0; color: var(--primary-color);">📥 Descargar Backup</h3>
+                                <p style="margin: 0 0 15px 0; font-size: 0.9em; color: #7f8c8d;">
+                                    Descarga una copia completa de toda la base de datos del sistema (archivo .db)
+                                </p>
+                                <button onclick="descargarBackup()" class="admin-btn success" style="width: 100%;">
+                                    📥 Descargar Backup Completo
+                                </button>
+                                <div id="backupStatus" style="margin-top: 10px; font-size: 0.85em;"></div>
+                            </div>
+
+                            <!-- Sección de Recovery -->
+                            <div style="background: var(--bg-color); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color);">
+                                <h3 style="margin: 0 0 15px 0; color: var(--danger-color);">📤 Restaurar desde Backup</h3>
+                                <div style="background: rgba(220, 53, 69, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 3px solid var(--danger-color);">
+                                    <p style="margin: 0; font-size: 0.85em; font-weight: 600;">
+                                        ⚠️ <strong>ADVERTENCIA:</strong> Esta acción reemplazará TODOS los datos actuales y reiniciará el servidor automáticamente.
+                                    </p>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">Seleccionar archivo de backup (.db):</label>
+                                    <input type="file" id="backupFile" accept=".db" style="width: 100%; padding: 8px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 0.9em;">
+                                </div>
+                                <button onclick="restaurarBackup()" class="admin-btn danger" style="width: 100%;" id="restoreBtn" disabled>
+                                    📤 Restaurar Base de Datos
+                                </button>
+                                <div id="restoreStatus" style="margin-top: 10px; font-size: 0.85em;"></div>
+                            </div>
+
+                            <!-- Información adicional -->
+                            <div style="background: rgba(15, 167, 149, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                                <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">💡 Mejores Prácticas</h4>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 0.85em; line-height: 1.4;">
+                                    <li><strong>Frecuencia:</strong> Hacer backup semanalmente o antes de cambios importantes</li>
+                                    <li><strong>Almacenamiento:</strong> Guardar backups en Google Drive o Dropbox</li>
+                                    <li><strong>Nomenclatura:</strong> Los archivos incluyen fecha automáticamente</li>
+                                    <li><strong>Pruebas:</strong> Verificar que el backup se descargó correctamente</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="admin-controls">
                         <div class="panel">
@@ -3214,6 +3271,7 @@ Generado por DPI Sistema de Ventas
                     </div>
                 `;
                 
+                // Configurar eventos
                 const scriptForm = document.getElementById('scriptForm');
                 if (scriptForm) {
                     scriptForm.addEventListener('submit', handleAdminFormSubmit);
@@ -3223,6 +3281,25 @@ Generado por DPI Sistema de Ventas
                 if (filterCategory) {
                     filterCategory.addEventListener('change', renderAdminList);
                 }
+
+                // Configurar evento del input de archivo
+                const backupFileInput = document.getElementById('backupFile');
+                const restoreBtn = document.getElementById('restoreBtn');
+                if (backupFileInput && restoreBtn) {
+                    backupFileInput.addEventListener('change', function() {
+                        const file = this.files[0];
+                        if (file && file.name.endsWith('.db')) {
+                            restoreBtn.disabled = false;
+                            restoreBtn.style.opacity = '1';
+                        } else {
+                            restoreBtn.disabled = true;
+                            restoreBtn.style.opacity = '0.5';
+                            if (file && !file.name.endsWith('.db')) {
+                                showBackupStatus('❌ Por favor selecciona un archivo .db válido', 'error', 'restoreStatus');
+                            }
+                        }
+                    });
+                }
             }
             
             populateCategorySelect('scriptCategory');
@@ -3230,6 +3307,142 @@ Generado por DPI Sistema de Ventas
             renderAdminList();
             loadAnalyticsDashboard();
             updateAdminStats();
+        }
+
+        // ✅ NUEVAS FUNCIONES DE BACKUP Y RECOVERY
+        async function descargarBackup() {
+            const statusDiv = document.getElementById('backupStatus');
+            
+            try {
+                showBackupStatus('📥 Preparando backup...', 'info', 'backupStatus');
+                
+                const response = await fetch(`${API_BASE_URL}/api/backup`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer DPI2025Admin'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+
+                // Crear nombre de archivo con timestamp
+                const timestamp = new Date().toISOString().split('T')[0];
+                const filename = `dpi_backup_${timestamp}.db`;
+
+                // Descargar archivo
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                showBackupStatus(`✅ Backup descargado: ${filename}`, 'success', 'backupStatus');
+                showAlert('✅ Backup completo descargado exitosamente', 'success');
+
+            } catch (error) {
+                console.error('Error al descargar backup:', error);
+                showBackupStatus(`❌ Error: ${error.message}`, 'error', 'backupStatus');
+                showAlert('❌ Error al descargar backup', 'error');
+            }
+        }
+
+        async function restaurarBackup() {
+            const fileInput = document.getElementById('backupFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showBackupStatus('❌ Por favor selecciona un archivo de backup', 'error', 'restoreStatus');
+                return;
+            }
+
+            if (!file.name.endsWith('.db')) {
+                showBackupStatus('❌ Formato de archivo inválido. Solo archivos .db', 'error', 'restoreStatus');
+                return;
+            }
+
+            // Confirmación múltiple para evitar accidentes
+            const confirmacion1 = confirm(`¿Estás seguro de que quieres restaurar desde "${file.name}"?\n\n⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES`);
+            if (!confirmacion1) return;
+
+            const confirmacion2 = confirm(`🚨 ÚLTIMA ADVERTENCIA 🚨\n\nEsta acción:\n• Eliminará TODOS los datos actuales\n• Restaurará desde: ${file.name}\n• Reiniciará el servidor automáticamente\n\n¿Continuar con la restauración?`);
+            if (!confirmacion2) return;
+
+            try {
+                showBackupStatus('📤 Iniciando restauración...', 'info', 'restoreStatus');
+
+                const formData = new FormData();
+                formData.append('backup', file);
+
+                const response = await fetch(`${API_BASE_URL}/api/restore`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer DPI2025Admin'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || `Error del servidor: ${response.status}`);
+                }
+
+                showBackupStatus('✅ Restauración completada. El servidor se reiniciará...', 'success', 'restoreStatus');
+                showAlert('✅ Restauración exitosa. El servidor se reiniciará automáticamente.', 'success');
+
+                // Limpiar input
+                fileInput.value = '';
+                document.getElementById('restoreBtn').disabled = true;
+
+                // Informar sobre el reinicio
+                setTimeout(() => {
+                    alert('🔄 El servidor se está reiniciando.\n\nPor favor, recarga la página en unos segundos.');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error al restaurar backup:', error);
+                showBackupStatus(`❌ Error: ${error.message}`, 'error', 'restoreStatus');
+                showAlert('❌ Error durante la restauración', 'error');
+            }
+        }
+
+        function showBackupStatus(message, type, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const colors = {
+                'info': '#17a2b8',
+                'success': '#28a745',
+                'error': '#dc3545',
+                'warning': '#ffc107'
+            };
+
+            container.innerHTML = `
+                <div style="
+                    color: ${colors[type] || '#17a2b8'}; 
+                    font-weight: 600;
+                    padding: 8px 12px;
+                    background: ${colors[type] ? colors[type] + '15' : '#17a2b815'};
+                    border-radius: 5px;
+                    border-left: 3px solid ${colors[type] || '#17a2b8'};
+                ">
+                    ${message}
+                </div>
+            `;
+
+            // Auto-limpiar después de 10 segundos para mensajes de éxito/info
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    if (container) container.innerHTML = '';
+                }, 10000);
+            }
         }
 
         // ✅ POBLAR SELECTS
