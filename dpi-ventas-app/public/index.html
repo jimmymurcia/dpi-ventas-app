@@ -580,196 +580,321 @@
             color: var(--primary-color);
             font-weight: 600;
         }
-        
-        /* 📋 CARDS COMPACTAS DE PERFILES */
-        .perfil-card-compacta {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 12px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .perfil-card-compacta:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-            border-color: var(--primary-color);
-        }
-        
-        .perfil-card-compacta.expandida {
-            border-color: var(--primary-color);
-            box-shadow: 0 6px 20px rgba(15, 167, 149, 0.15);
-        }
-        
-        .perfil-header-compacto {
+
+        /* 📋 VISTA Y CONTROLES MEJORADOS */
+        .view-controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 10px;
         }
+
+        .view-toggle {
+            display: flex;
+            background: #e0e5ec;
+            border-radius: 20px;
+            padding: 3px;
+            box-shadow: inset 2px 2px 5px #caced4, inset -2px -2px 5px #f8f9fa;
+        }
+
+        .view-toggle-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 17px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(15, 167, 149, 0.3);
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .bulk-btn {
+            background: var(--info-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .bulk-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .bulk-btn.export { background: var(--warning-color); }
+        .bulk-btn.share { background: var(--secondary-color); }
         
-        .perfil-nombre-compacto {
+        /* 📋 CARDS MEJORADAS CON BADGES INTELIGENTES */
+        .perfil-card-enhanced {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .perfil-card-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .perfil-card-enhanced:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            transform: translateY(-3px);
+            border-color: var(--primary-color);
+        }
+
+        .perfil-card-enhanced:hover::before {
+            opacity: 1;
+        }
+
+        .perfil-card-enhanced.expandida {
+            border-color: var(--primary-color);
+            box-shadow: 0 6px 20px rgba(15, 167, 149, 0.15);
+        }
+
+        .perfil-card-enhanced.expandida::before {
+            opacity: 1;
+        }
+
+        .perfil-header-enhanced {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .perfil-nombre-enhanced {
             font-weight: 700;
             color: var(--dark-color);
-            font-size: 1.1em;
+            font-size: 1.2em;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            flex: 1;
         }
-        
-        .perfil-tipo-compacto {
-            background: var(--warning-color);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: 600;
+
+        .perfil-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
         }
-        
-        .perfil-resumen {
+
+        .badge-smart {
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.7em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge-smart::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .badge-smart:hover::before {
+            left: 100%;
+        }
+
+        .badge-tipo { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .badge-presupuesto.alto { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
+        .badge-presupuesto.medio { background: linear-gradient(135deg, #ffc107, #fd7e14); color: white; }
+        .badge-presupuesto.bajo { background: linear-gradient(135deg, #6c757d, #495057); color: white; }
+        .badge-urgencia.alta { background: linear-gradient(135deg, #dc3545, #e74c3c); color: white; }
+        .badge-urgencia.media { background: linear-gradient(135deg, #fd7e14, #f39c12); color: white; }
+        .badge-urgencia.baja { background: linear-gradient(135deg, #17a2b8, #20c997); color: white; }
+        .badge-fecha { background: linear-gradient(135deg, #6f42c1, #e83e8c); color: white; }
+
+        .perfil-preview {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
-        
-        .perfil-resumen-item {
-            font-size: 0.85em;
+
+        .preview-item {
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
         }
-        
-        .perfil-resumen-item strong {
+
+        .preview-item strong {
             color: var(--primary-color);
             display: block;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            font-size: 0.85em;
         }
-        
-        .perfil-tags-compacto {
+
+        .preview-item span {
+            font-size: 0.9em;
+            line-height: 1.3;
+        }
+
+        .perfil-actions-enhanced {
             display: flex;
-            gap: 6px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .perfil-tag-compacto {
-            background: var(--info-color);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.7em;
-            font-weight: 600;
-        }
-        
-        .perfil-tag-compacto.presupuesto-bajo { background: #6c757d; }
-        .perfil-tag-compacto.presupuesto-medio { background: #ffc107; }
-        .perfil-tag-compacto.presupuesto-alto { background: #28a745; }
-        .perfil-tag-compacto.urgencia-baja { background: #17a2b8; }
-        .perfil-tag-compacto.urgencia-media { background: #fd7e14; }
-        .perfil-tag-compacto.urgencia-alta { background: #dc3545; }
-        
-        .perfil-expandir-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            width: 30px;
-            height: 30px;
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.8em;
-        }
-        
-        .perfil-expandir-btn:hover {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-        
-        .perfil-detalles {
-            display: none;
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid var(--border-color);
         }
-        
-        .perfil-detalles.visible {
-            display: block;
-        }
-        
-        .perfil-detalle-item {
-            margin-bottom: 12px;
-            font-size: 0.9em;
-        }
-        
-        .perfil-detalle-item strong {
-            color: var(--primary-color);
-            display: block;
-            margin-bottom: 4px;
-        }
-        
-        .perfil-acciones-compacto {
+
+        .action-group {
             display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-color);
+            gap: 6px;
         }
-        
-        .perfil-acciones-compacto button {
+
+        .action-btn {
             border: none;
             padding: 6px 12px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.8em;
             font-weight: 600;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover::before {
+            width: 100px;
+            height: 100px;
+        }
+
+        .action-btn.copy { background: var(--info-color); color: white; }
+        .action-btn.share { background: var(--secondary-color); color: white; }
+        .action-btn.edit { background: var(--warning-color); color: white; }
+        .action-btn.delete { background: var(--danger-color); color: white; }
+        .action-btn.expand { background: var(--primary-color); color: white; }
+
+        .perfil-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75em;
+            color: #7f8c8d;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* VISTA LISTA COMPACTA */
+        .perfil-list-view {
+            display: none;
+        }
+
+        .perfil-list-view.active {
+            display: block;
+        }
+
+        .perfil-list-item {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .perfil-list-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+            border-color: var(--primary-color);
+        }
+
+        .list-item-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .list-item-name {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .list-item-info {
+            font-size: 0.85em;
+            color: #7f8c8d;
+        }
+
+        .list-item-badges {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 4px;
         }
         
-        .perfil-editar-btn {
-            background: var(--info-color);
-            color: white;
-        }
-        
-        .perfil-editar-btn:hover {
-            background: #138496;
-        }
-        
-        .perfil-eliminar-btn {
-            background: var(--danger-color);
-            color: white;
-        }
-        
-        .perfil-eliminar-btn:hover {
-            background: #c82333;
-        }
-        
-        /* Responsive para filtros */
-        @media (max-width: 768px) {
-            .filtros-cliente {
-                grid-template-columns: 1fr;
-                gap: 10px;
-                padding: 12px;
-            }
-            
-            .perfil-resumen {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            
-            .perfil-header-compacto {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-        }
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -808,6 +933,30 @@
             margin-bottom: 15px;
             font-size: 0.85em;
             border-left: 3px solid var(--warning-color);
+        }
+
+        /* 📝 SECCIÓN DE SCRIPTS MEJORADA */
+        .scripts-section-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .scripts-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .scripts-section-description {
+            background: rgba(15, 167, 149, 0.1);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            border-left: 4px solid var(--primary-color);
+            line-height: 1.4;
         }
         
         .formulario-cliente {
@@ -927,128 +1076,6 @@
         .clientes-potenciales-lista {
             display: grid;
             gap: 12px;
-        }
-        
-        .cliente-potencial-card {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 12px;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        
-        .cliente-potencial-card:hover {
-            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-            transform: translateY(-1px);
-        }
-        
-        .cliente-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        
-        .cliente-nombre {
-            font-weight: 700;
-            color: var(--dark-color);
-            font-size: 1em;
-        }
-        
-        .cliente-tipo {
-            background: var(--warning-color);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.7em;
-            font-weight: 600;
-        }
-        
-        .cliente-info {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-        
-        .cliente-field {
-            font-size: 0.8em;
-        }
-        
-        .cliente-field strong {
-            color: var(--primary-color);
-        }
-        
-        .cliente-descripcion {
-            background: var(--bg-color);
-            padding: 8px;
-            border-radius: 5px;
-            font-size: 0.85em;
-            margin-bottom: 8px;
-            font-style: italic;
-        }
-        
-        .cliente-tags {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .cliente-tag {
-            background: var(--info-color);
-            color: white;
-            padding: 1px 5px;
-            border-radius: 8px;
-            font-size: 0.65em;
-            font-weight: 600;
-        }
-        
-        .cliente-tag.presupuesto-bajo { background: #dc3545; }
-        .cliente-tag.presupuesto-medio { background: #ffc107; }
-        .cliente-tag.presupuesto-alto { background: #28a745; }
-        .cliente-tag.urgencia-baja { background: #6c757d; }
-        .cliente-tag.urgencia-media { background: #fd7e14; }
-        .cliente-tag.urgencia-alta { background: #dc3545; }
-        
-        .cliente-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid var(--border-color);
-            font-size: 0.75em;
-            color: #7f8c8d;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        
-        .cliente-actions {
-            display: flex;
-            gap: 4px;
-        }
-        
-        .editar-cliente-btn, .eliminar-cliente-btn {
-            border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.75em;
-            font-weight: 600;
-        }
-        
-        .editar-cliente-btn {
-            background: var(--info-color);
-            color: white;
-        }
-        
-        .eliminar-cliente-btn {
-            background: var(--danger-color);
-            color: white;
         }
         
         .cliente-empty {
@@ -1363,13 +1390,14 @@
             .semaforo-container { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
             .semaforo-light { min-height: 200px; padding: 25px; }
             .form-row { grid-template-columns: 1fr 1fr; }
-            .cliente-info { grid-template-columns: 1fr 1fr; }
             .admin-controls { grid-template-columns: 1fr 1.2fr; }
             .stats-bar { padding: 20px; }
             .stats-number { font-size: 2em; }
             .decision-matrix { grid-template-columns: 1fr 1fr 1fr; }
             .search-input { padding: 15px 20px 15px 50px; font-size: 1em; }
             .search-box::before { left: 20px; top: 15px; font-size: 1.2em; }
+            .perfil-preview { grid-template-columns: 1fr 1fr; }
+            .list-item-content { grid-template-columns: 2fr 1fr 1fr; }
         }
         
         @media (max-width: 480px) {
@@ -1382,6 +1410,10 @@
             .form-actions { flex-direction: column; }
             .proceso-footer { flex-direction: column; text-align: center; }
             .section-header { flex-direction: column; align-items: flex-start; }
+            .view-controls { flex-direction: column; }
+            .perfil-preview { grid-template-columns: 1fr; }
+            .list-item-content { grid-template-columns: 1fr; gap: 8px; }
+            .bulk-actions { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -1610,14 +1642,24 @@
                 </div>
             </div>
             
+            <!-- 📝 SECCIÓN DE SCRIPTS MEJORADA -->
             <div class="panel">
+                <div class="scripts-section-header">
+                    <div class="scripts-section-title">
+                        <h2>📝 Biblioteca de Scripts de Ventas</h2>
+                    </div>
+                    <div class="scripts-section-description">
+                        <strong>💡 Propósito:</strong> Scripts probados y validados para cada etapa del proceso de venta. Úsalos como guía y adáptalos a tu estilo personal. Cada script tiene métricas de uso para identificar los más efectivos del equipo.
+                    </div>
+                </div>
+                
                 <div class="tabs" id="categoryTabs"></div>
                 <div class="tab-content" id="scriptsContainer">
                     <div class="loading">Cargando scripts...</div>
                 </div>
             </div>
 
-            <!-- 👤 PERFILES DE CLIENTES IDEALES -->
+            <!-- 👤 PERFILES DE CLIENTES IDEALES MEJORADOS -->
             <div class="panel">
                 <h2>👤 Base de Conocimiento - Perfiles de Clientes Ideales</h2>
                 <div class="cliente-ideal-container">
@@ -1627,7 +1669,7 @@
                             <button class="agregar-cliente-btn" onclick="abrirFormularioCliente()">➕ Agregar Perfil</button>
                         </div>
                         <p class="section-description">
-                            <strong>💡 Propósito:</strong> Arquetipos de clientes exitosos para consulta rápida del equipo.
+                            <strong>💡 Propósito:</strong> Arquetipos de clientes exitosos para consulta rápida del equipo. Cada perfil incluye características clave, necesidades típicas y estrategias de approach efectivas.
                         </p>
 
                         <!-- Filtros de búsqueda estratégicos -->
@@ -1661,6 +1703,24 @@
                                     <option value="media">⏳ Decisión Normal</option>
                                     <option value="baja">🤔 Planifican Mucho</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Controles de vista mejorados -->
+                        <div class="view-controls">
+                            <div class="view-toggle">
+                                <button class="view-toggle-btn active" onclick="cambiarVista('cards')" id="cardsViewBtn">
+                                    📋 Tarjetas
+                                </button>
+                                <button class="view-toggle-btn" onclick="cambiarVista('list')" id="listViewBtn">
+                                    📃 Lista
+                                </button>
+                            </div>
+                            
+                            <div class="bulk-actions">
+                                <button class="bulk-btn export" onclick="exportarPerfiles()">📊 Exportar</button>
+                                <button class="bulk-btn share" onclick="compartirPerfiles()">📤 Compartir</button>
+                                <button class="bulk-btn" onclick="mostrarEstadisticas()">📈 Estadísticas</button>
                             </div>
                         </div>
                         
@@ -1751,8 +1811,15 @@
 
                         <!-- Contador y lista dinámica de perfiles -->
                         <div class="perfil-count" id="perfilesCount">📊 Cargando perfiles...</div>
+                        
+                        <!-- Vista de tarjetas -->
                         <div class="clientes-potenciales-lista" id="clientesPotencialesList">
                             <div class="loading">Cargando perfiles de clientes ideales...</div>
+                        </div>
+                        
+                        <!-- Vista de lista -->
+                        <div class="perfil-list-view" id="perfilListView">
+                            <div class="loading">Cargando vista de lista...</div>
                         </div>
                     </div>
                 </div>
@@ -1775,6 +1842,7 @@
         let connectionInterval = null;
         let CLIENTES_POTENCIALES = [];
         let currentEditingClienteId = null;
+        let currentView = 'cards'; // 'cards' o 'list'
 
         // ✅ FUNCIÓN DE ALERTAS
         function showAlert(message, type = 'success', containerId = 'alertContainer') {
@@ -2187,9 +2255,366 @@
             }
         }
 
-        // ✅ SISTEMA DINÁMICO DE CLIENTES POTENCIALES
-        // ✅ RENDERIZADO COMPACTO DE PERFILES
+        // ✅ NUEVO SISTEMA DE VISTAS PARA CLIENTES IDEALES
+
+        // Cambiar entre vista de tarjetas y lista
+        function cambiarVista(vista) {
+            currentView = vista;
+            
+            const cardsViewBtn = document.getElementById('cardsViewBtn');
+            const listViewBtn = document.getElementById('listViewBtn');
+            const cardsContainer = document.getElementById('clientesPotencialesList');
+            const listContainer = document.getElementById('perfilListView');
+            
+            if (vista === 'cards') {
+                cardsViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+                cardsContainer.style.display = 'grid';
+                listContainer.classList.remove('active');
+                renderClientesPotenciales();
+            } else {
+                listViewBtn.classList.add('active');
+                cardsViewBtn.classList.remove('active');
+                cardsContainer.style.display = 'none';
+                listContainer.classList.add('active');
+                renderVistaLista();
+            }
+        }
+
+        // Renderizar vista de lista compacta
+        function renderVistaLista() {
+            const container = document.getElementById('perfilListView');
+            if (!container) return;
+            
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            if (perfilesFiltrados.length === 0) {
+                container.innerHTML = `
+                    <div class="cliente-empty">
+                        📚 No hay perfiles que coincidan con los filtros.<br>
+                        ${CLIENTES_POTENCIALES.length === 0 ? '¡Agrega el primer perfil usando el botón de arriba!' : 'Prueba ajustando los filtros.'}
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = perfilesFiltrados.map(cliente => createPerfilListItem(cliente)).join('');
+        }
+
+        function createPerfilListItem(cliente) {
+            const tipoLabels = {
+                restaurante: "🍽️ Restaurante",
+                retail: "🏪 Retail", 
+                servicios: "💼 Servicios",
+                clinica: "🏥 Clínica",
+                empresa: "🏢 Empresa",
+                otro: "📋 Otro"
+            };
+            
+            const presupuestoLabels = {
+                bajo: "Bajo",
+                medio: "Medio", 
+                alto: "Alto"
+            };
+            
+            const urgenciaLabels = {
+                baja: "Planifican",
+                media: "Normal",
+                alta: "Rápidos"
+            };
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            return `
+                <div class="perfil-list-item" onclick="verDetallesPerfil(${cliente.id})">
+                    <div class="list-item-content">
+                        <div>
+                            <div class="list-item-name">${cliente.nombre}</div>
+                            <div class="list-item-info">${cliente.contacto || 'Sin contacto'} • ${cliente.telefono || 'Sin ubicación'}</div>
+                        </div>
+                        <div class="list-item-info">
+                            ${tipoLabels[cliente.tipo] || cliente.tipo}
+                        </div>
+                        <div class="list-item-badges">
+                            ${cliente.presupuesto ? `<span class="badge-smart badge-presupuesto ${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                            ${cliente.urgencia ? `<span class="badge-smart badge-urgencia ${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="list-item-actions">
+                        <button class="action-btn copy" onclick="event.stopPropagation(); copiarPerfil(${cliente.id})" title="Copiar perfil">
+                            📋
+                        </button>
+                        <button class="action-btn edit" onclick="event.stopPropagation(); editarCliente(${cliente.id})" title="Editar">
+                            ✏️
+                        </button>
+                        <button class="action-btn delete" onclick="event.stopPropagation(); eliminarCliente(${cliente.id})" title="Eliminar">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Ver detalles del perfil en modal o expandir
+        function verDetallesPerfil(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            const modal = `
+                <div class="auth-overlay active" onclick="cerrarModal(event)">
+                    <div class="auth-modal" style="max-width: 600px; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0;">${cliente.nombre}</h2>
+                            <button onclick="cerrarModal()" style="background: var(--danger-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✖️</button>
+                        </div>
+                        
+                        <div style="text-align: left;">
+                            <div style="margin-bottom: 15px;">
+                                <strong>🏢 Tipo de Negocio:</strong><br>
+                                ${cliente.tipo}
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <strong>👤 Contacto Típico:</strong><br>
+                                ${cliente.contacto || 'No especificado'}
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <strong>📍 Ubicación Típica:</strong><br>
+                                ${cliente.telefono || 'No especificado'}
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <strong>🎯 Características IDEALES:</strong><br>
+                                ${cliente.caracteristicas}
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <strong>📢 Publicidad que necesitan:</strong><br>
+                                ${cliente.necesidad}
+                            </div>
+                            
+                            ${proximosPasos ? `
+                                <div style="margin-bottom: 15px;">
+                                    <strong>💡 Estrategias de Approach:</strong><br>
+                                    ${proximosPasos}
+                                </div>
+                            ` : ''}
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                                <button class="action-btn copy" onclick="copiarPerfil(${cliente.id})">📋 Copiar Perfil</button>
+                                <button class="action-btn share" onclick="compartirPerfil(${cliente.id})">📤 Compartir</button>
+                                <button class="action-btn edit" onclick="editarCliente(${cliente.id}); cerrarModal();">✏️ Editar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modal);
+        }
+
+        function cerrarModal(event) {
+            if (event && event.target.classList.contains('auth-overlay')) {
+                event.target.remove();
+            } else if (!event) {
+                document.querySelector('.auth-overlay')?.remove();
+            }
+        }
+
+        // Copiar perfil al portapapeles
+        function copiarPerfil(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
+            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
+            
+            const texto = `
+🎯 PERFIL DE CLIENTE IDEAL: ${cliente.nombre}
+
+🏢 Tipo: ${cliente.tipo}
+👤 Contacto típico: ${cliente.contacto || 'No especificado'}
+📍 Ubicación: ${cliente.telefono || 'No especificado'}
+
+💰 Presupuesto: ${cliente.presupuesto || 'No especificado'}
+⚡ Decisión: ${cliente.urgencia || 'No especificado'}
+
+🎯 CARACTERÍSTICAS IDEALES:
+${cliente.caracteristicas}
+
+📢 PUBLICIDAD QUE NECESITAN:
+${cliente.necesidad}
+
+${proximosPasos ? `💡 ESTRATEGIAS DE APPROACH:
+${proximosPasos}` : ''}
+
+📝 Documentado por: ${cliente.vendedor || 'No especificado'}
+📅 Fecha: ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'No especificada'}
+
+---
+Generado por DPI Sistema de Ventas
+            `.trim();
+            
+            navigator.clipboard.writeText(texto).then(() => {
+                showAlert('✅ Perfil copiado al portapapeles', 'success');
+            }).catch(() => {
+                showAlert('❌ Error al copiar perfil', 'error');
+            });
+        }
+
+        // Compartir perfil específico
+        function compartirPerfil(id) {
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            if (!cliente) return;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: `Perfil de Cliente Ideal: ${cliente.nombre}`,
+                    text: `Características y estrategias para ${cliente.nombre} - ${cliente.tipo}`,
+                    url: window.location.href
+                }).catch(err => console.log('Error al compartir:', err));
+            } else {
+                copiarPerfil(id);
+                showAlert('📋 Perfil copiado. Compártelo pegándolo donde necesites.', 'success');
+            }
+        }
+
+        // Exportar todos los perfiles filtrados
+        function exportarPerfiles() {
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            if (perfilesFiltrados.length === 0) {
+                showAlert('❌ No hay perfiles para exportar con los filtros actuales', 'error');
+                return;
+            }
+            
+            let csvContent = "Nombre,Tipo,Contacto,Ubicación,Características,Necesidad,Presupuesto,Urgencia,Estrategias,Vendedor,Fecha\n";
+            
+            perfilesFiltrados.forEach(cliente => {
+                const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos || '';
+                const fechaContacto = cliente.fecha_contacto || cliente.fecha || '';
+                
+                csvContent += `"${cliente.nombre}","${cliente.tipo}","${cliente.contacto || ''}","${cliente.telefono || ''}","${cliente.caracteristicas}","${cliente.necesidad}","${cliente.presupuesto || ''}","${cliente.urgencia || ''}","${proximosPasos}","${cliente.vendedor || ''}","${fechaContacto}"\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `perfiles_clientes_ideales_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert(`📊 ${perfilesFiltrados.length} perfiles exportados exitosamente`, 'success');
+        }
+
+        // Compartir todos los perfiles
+        function compartirPerfiles() {
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            if (perfilesFiltrados.length === 0) {
+                showAlert('❌ No hay perfiles para compartir con los filtros actuales', 'error');
+                return;
+            }
+            
+            let resumen = `🎯 PERFILES DE CLIENTES IDEALES - DPI PUBLICIDAD\n\n`;
+            resumen += `📊 Total de perfiles: ${perfilesFiltrados.length}\n`;
+            resumen += `📅 Generado: ${new Date().toLocaleDateString()}\n\n`;
+            
+            perfilesFiltrados.forEach((cliente, index) => {
+                resumen += `${index + 1}. ${cliente.nombre} (${cliente.tipo})\n`;
+                resumen += `   💰 ${cliente.presupuesto || 'N/A'} | ⚡ ${cliente.urgencia || 'N/A'}\n`;
+                resumen += `   ${cliente.caracteristicas.substring(0, 100)}...\n\n`;
+            });
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Perfiles de Clientes Ideales - DPI Publicidad',
+                    text: resumen,
+                    url: window.location.href
+                }).catch(err => console.log('Error al compartir:', err));
+            } else {
+                navigator.clipboard.writeText(resumen).then(() => {
+                    showAlert('📋 Resumen de perfiles copiado al portapapeles', 'success');
+                }).catch(() => {
+                    showAlert('❌ Error al copiar resumen', 'error');
+                });
+            }
+        }
+
+        // Mostrar estadísticas de perfiles
+        function mostrarEstadisticas() {
+            const total = CLIENTES_POTENCIALES.length;
+            const perfilesFiltrados = filtrarPerfilesData();
+            
+            // Estadísticas por tipo
+            const porTipo = {};
+            const porPresupuesto = {};
+            const porUrgencia = {};
+            
+            CLIENTES_POTENCIALES.forEach(cliente => {
+                porTipo[cliente.tipo] = (porTipo[cliente.tipo] || 0) + 1;
+                if (cliente.presupuesto) porPresupuesto[cliente.presupuesto] = (porPresupuesto[cliente.presupuesto] || 0) + 1;
+                if (cliente.urgencia) porUrgencia[cliente.urgencia] = (porUrgencia[cliente.urgencia] || 0) + 1;
+            });
+            
+            const estadisticas = `
+                <div class="auth-overlay active" onclick="cerrarModal(event)">
+                    <div class="auth-modal" style="max-width: 500px;" onclick="event.stopPropagation()">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0;">📈 Estadísticas de Perfiles</h2>
+                            <button onclick="cerrarModal()" style="background: var(--danger-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✖️</button>
+                        </div>
+                        
+                        <div style="text-align: left;">
+                            <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4>📊 Resumen General</h4>
+                                <p><strong>Total de perfiles:</strong> ${total}</p>
+                                <p><strong>Perfiles filtrados:</strong> ${perfilesFiltrados.length}</p>
+                            </div>
+                            
+                            <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4>🏢 Por Tipo de Negocio</h4>
+                                ${Object.entries(porTipo).map(([tipo, count]) => 
+                                    `<p>${tipo}: <strong>${count}</strong> (${Math.round(count/total*100)}%)</p>`
+                                ).join('')}
+                            </div>
+                            
+                            <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4>💰 Por Presupuesto</h4>
+                                ${Object.entries(porPresupuesto).map(([presupuesto, count]) => 
+                                    `<p>${presupuesto}: <strong>${count}</strong> (${Math.round(count/total*100)}%)</p>`
+                                ).join('')}
+                            </div>
+                            
+                            <div style="background: var(--bg-color); padding: 15px; border-radius: 8px;">
+                                <h4>⚡ Por Urgencia</h4>
+                                ${Object.entries(porUrgencia).map(([urgencia, count]) => 
+                                    `<p>${urgencia}: <strong>${count}</strong> (${Math.round(count/total*100)}%)</p>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', estadisticas);
+        }
+
+        // ✅ RENDERIZADO MEJORADO DE PERFILES
         function renderClientesPotenciales() {
+            if (currentView === 'list') {
+                renderVistaLista();
+                return;
+            }
+            
             const container = document.getElementById('clientesPotencialesList');
             if (!container) return;
             
@@ -2211,10 +2636,10 @@
                 return;
             }
             
-            container.innerHTML = perfilesFiltrados.map(cliente => createPerfilCardCompacta(cliente)).join('');
+            container.innerHTML = perfilesFiltrados.map(cliente => createPerfilCardEnhanced(cliente)).join('');
         }
         
-        function createPerfilCardCompacta(cliente) {
+        function createPerfilCardEnhanced(cliente) {
             const tipoLabels = {
                 restaurante: "🍽️ Restaurante",
                 retail: "🏪 Retail", 
@@ -2225,9 +2650,9 @@
             };
             
             const presupuestoLabels = {
-                bajo: "Bajo ($500-$2K)",
-                medio: "Medio ($2K-$5K)", 
-                alto: "Alto ($5K+)"
+                bajo: "Bajo",
+                medio: "Medio", 
+                alto: "Alto"
             };
             
             const urgenciaLabels = {
@@ -2240,60 +2665,63 @@
             const fechaContacto = cliente.fecha_contacto || cliente.fecha;
             
             return `
-                <div class="perfil-card-compacta" id="perfil-${cliente.id}">
-                    <div class="perfil-expandir-btn" onclick="togglePerfilDetalle(${cliente.id})">
-                        <span id="expand-icon-${cliente.id}">▶</span>
-                    </div>
-                    
-                    <div class="perfil-header-compacto">
-                        <div class="perfil-nombre-compacto">
+                <div class="perfil-card-enhanced" id="perfil-${cliente.id}">
+                    <div class="perfil-header-enhanced">
+                        <div class="perfil-nombre-enhanced">
                             ${cliente.nombre}
                         </div>
-                        <div class="perfil-tipo-compacto">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
+                        <div class="perfil-badges">
+                            <span class="badge-smart badge-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</span>
+                            ${cliente.presupuesto ? `<span class="badge-smart badge-presupuesto ${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
+                            ${cliente.urgencia ? `<span class="badge-smart badge-urgencia ${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
+                            ${fechaContacto ? `<span class="badge-smart badge-fecha">${new Date(fechaContacto).toLocaleDateString()}</span>` : ''}
+                        </div>
                     </div>
                     
-                    <div class="perfil-resumen">
-                        <div class="perfil-resumen-item">
+                    <div class="perfil-preview">
+                        <div class="preview-item">
                             <strong>👤 Contacto típico:</strong>
-                            ${cliente.contacto || 'No especificado'}
+                            <span>${cliente.contacto || 'No especificado'}</span>
                         </div>
-                        <div class="perfil-resumen-item">
+                        <div class="preview-item">
                             <strong>📍 Ubicación típica:</strong>
-                            ${cliente.telefono || 'No especificado'}
+                            <span>${cliente.telefono || 'No especificado'}</span>
                         </div>
                     </div>
                     
-                    <div class="perfil-tags-compacto">
-                        ${cliente.presupuesto ? `<span class="perfil-tag-compacto presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
-                        ${cliente.urgencia ? `<span class="perfil-tag-compacto urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
-                        <span class="perfil-tag-compacto">📅 ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'Sin fecha'}</span>
+                    <div class="preview-item" style="grid-column: 1 / -1;">
+                        <strong>🎯 Características IDEALES:</strong>
+                        <span>${cliente.caracteristicas.length > 150 ? cliente.caracteristicas.substring(0, 150) + '...' : cliente.caracteristicas}</span>
                     </div>
                     
-                    <div class="perfil-detalles" id="detalles-${cliente.id}">
-                        <div class="perfil-detalle-item">
-                            <strong>🎯 Características que los hacen IDEALES:</strong>
-                            ${cliente.caracteristicas}
-                        </div>
-                        
-                        <div class="perfil-detalle-item">
-                            <strong>📢 Tipo de publicidad que necesitan:</strong>
-                            ${cliente.necesidad}
-                        </div>
-                        
-                        ${proximosPasos ? `
-                            <div class="perfil-detalle-item">
-                                <strong>💡 Mejores estrategias de approach:</strong>
-                                ${proximosPasos}
+                    <div class="perfil-actions-enhanced">
+                        <div class="perfil-stats">
+                            <div class="stat-item">
+                                <span>📝</span>
+                                <span>Por: ${cliente.vendedor || 'No especificado'}</span>
                             </div>
-                        ` : ''}
-                        
-                        <div class="perfil-detalle-item">
-                            <strong>📝 Documentado por:</strong> ${cliente.vendedor || 'No especificado'}
+                            <div class="stat-item">
+                                <span>📅</span>
+                                <span>${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'Sin fecha'}</span>
+                            </div>
                         </div>
                         
-                        <div class="perfil-acciones-compacto">
-                            <button class="perfil-editar-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
-                            <button class="perfil-eliminar-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                        <div class="action-group">
+                            <button class="action-btn copy" onclick="copiarPerfil(${cliente.id})" title="Copiar perfil">
+                                📋
+                            </button>
+                            <button class="action-btn share" onclick="compartirPerfil(${cliente.id})" title="Compartir">
+                                📤
+                            </button>
+                            <button class="action-btn expand" onclick="verDetallesPerfil(${cliente.id})" title="Ver detalles">
+                                👁️
+                            </button>
+                            <button class="action-btn edit" onclick="editarCliente(${cliente.id})" title="Editar">
+                                ✏️
+                            </button>
+                            <button class="action-btn delete" onclick="eliminarCliente(${cliente.id})" title="Eliminar">
+                                🗑️
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2317,110 +2745,6 @@
         
         function filtrarPerfiles() {
             renderClientesPotenciales();
-        }
-        
-        // ✅ TOGGLE DE DETALLES
-        function togglePerfilDetalle(id) {
-            const detalles = document.getElementById(`detalles-${id}`);
-            const icon = document.getElementById(`expand-icon-${id}`);
-            const card = document.getElementById(`perfil-${id}`);
-            
-            if (detalles && icon && card) {
-                if (detalles.classList.contains('visible')) {
-                    detalles.classList.remove('visible');
-                    icon.textContent = '▶';
-                    card.classList.remove('expandida');
-                } else {
-                    detalles.classList.add('visible');
-                    icon.textContent = '▼';
-                    card.classList.add('expandida');
-                    
-                    // Scroll suave al perfil expandido
-                    setTimeout(() => {
-                        card.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'nearest' 
-                        });
-                    }, 100);
-                }
-            }
-        }
-        
-        function createClienteCard(cliente) {
-            const tipoLabels = {
-                restaurante: "🍽️ Restaurante",
-                retail: "🏪 Retail", 
-                servicios: "💼 Servicios",
-                clinica: "🏥 Clínica",
-                empresa: "🏢 Empresa",
-                otro: "📋 Otro"
-            };
-            
-            const presupuestoLabels = {
-                bajo: "Bajo ($500-$2K)",
-                medio: "Medio ($2K-$5K)", 
-                alto: "Alto ($5K+)"
-            };
-            
-            const urgenciaLabels = {
-                baja: "Planifican con tiempo",
-                media: "Decisión normal",
-                alta: "Decisión rápida"
-            };
-            
-            const proximosPasos = cliente.proximos_pasos || cliente.proximosPasos;
-            const fechaContacto = cliente.fecha_contacto || cliente.fecha;
-            
-            return `
-                <div class="cliente-potencial-card">
-                    <div class="cliente-header">
-                        <div class="cliente-nombre">${cliente.nombre}</div>
-                        <div class="cliente-tipo">${tipoLabels[cliente.tipo] || cliente.tipo}</div>
-                    </div>
-                    
-                    <div class="cliente-info">
-                        <div class="cliente-field">
-                            <strong>Contacto típico:</strong> ${cliente.contacto || 'No especificado'}
-                        </div>
-                        <div class="cliente-field">
-                            <strong>Ubicación típica:</strong> ${cliente.telefono || 'No especificado'}
-                        </div>
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>Características que los hacen IDEALES:</strong><br>
-                        ${cliente.caracteristicas}
-                    </div>
-                    
-                    <div class="cliente-descripcion">
-                        <strong>Tipo de publicidad que necesitan:</strong><br>
-                        ${cliente.necesidad}
-                    </div>
-                    
-                    ${proximosPasos ? `
-                        <div class="cliente-descripcion">
-                            <strong>Mejores estrategias de approach:</strong><br>
-                            ${proximosPasos}
-                        </div>
-                    ` : ''}
-                    
-                    <div class="cliente-tags">
-                        ${cliente.presupuesto ? `<span class="cliente-tag presupuesto-${cliente.presupuesto}">${presupuestoLabels[cliente.presupuesto]}</span>` : ''}
-                        ${cliente.urgencia ? `<span class="cliente-tag urgencia-${cliente.urgencia}">${urgenciaLabels[cliente.urgencia]}</span>` : ''}
-                    </div>
-                    
-                    <div class="cliente-footer">
-                        <div>
-                            <strong>Documentado por:</strong> ${cliente.vendedor || 'No especificado'} | 
-                            <strong>Fecha:</strong> ${fechaContacto ? new Date(fechaContacto).toLocaleDateString() : 'No especificada'}
-                        </div>
-                        <div class="cliente-actions">
-                            <button class="editar-cliente-btn" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
-                            <button class="eliminar-cliente-btn" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
         }
         
         function abrirFormularioCliente() {
