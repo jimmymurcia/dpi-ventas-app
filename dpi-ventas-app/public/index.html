@@ -2300,6 +2300,103 @@
         let dailyUsageCount = 0;
         let lastUsageDate = new Date().toDateString();
 
+        // MODAL PERSONALIZADO CON PROMISES (DEFINIDO AL PRINCIPIO)
+        function showConfirmModal(title, message, type = 'confirm') {
+            return new Promise((resolve) => {
+                console.log('🔔 Mostrando modal personalizado:', title);
+                
+                const overlay = document.getElementById('modalOverlay');
+                const titleEl = document.getElementById('modalTitle');
+                const messageEl = document.getElementById('modalMessage');
+                const confirmBtn = document.getElementById('modalConfirmBtn');
+                const cancelBtn = overlay?.querySelector('.modal-btn.secondary');
+                
+                if (!overlay || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
+                    console.error('❌ Elementos del modal no encontrados, usando confirm nativo');
+                    resolve(confirm(`${title}\n\n${message}`));
+                    return;
+                }
+                
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                
+                // Configurar botón según el tipo
+                if (type === 'danger') {
+                    confirmBtn.className = 'modal-btn danger';
+                    confirmBtn.textContent = 'Eliminar';
+                } else {
+                    confirmBtn.className = 'modal-btn primary';
+                    confirmBtn.textContent = 'Aceptar';
+                }
+                
+                // Limpiar eventos anteriores clonando elementos
+                const newConfirmBtn = confirmBtn.cloneNode(true);
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                
+                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                
+                // Agregar nuevos eventos
+                newConfirmBtn.addEventListener('click', () => {
+                    console.log('✅ Usuario confirmó acción');
+                    overlay.classList.remove('active');
+                    resolve(true);
+                });
+                
+                newCancelBtn.addEventListener('click', () => {
+                    console.log('❌ Usuario canceló acción');
+                    overlay.classList.remove('active');
+                    resolve(false);
+                });
+                
+                // Cerrar con ESC
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        console.log('❌ Usuario canceló con ESC');
+                        overlay.classList.remove('active');
+                        document.removeEventListener('keydown', handleEscape);
+                        resolve(false);
+                    }
+                };
+                
+                document.addEventListener('keydown', handleEscape);
+                
+                // Cerrar al hacer click fuera
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        console.log('❌ Usuario canceló haciendo click fuera');
+                        overlay.classList.remove('active');
+                        resolve(false);
+                    }
+                });
+                
+                overlay.classList.add('active');
+                console.log('✅ Modal personalizado mostrado');
+            });
+        }
+
+        // Para compatibilidad con usos existentes
+        function showModal(title, message, type = 'confirm', callback = null) {
+            if (callback && typeof callback === 'function') {
+                // Si se proporciona callback, usar el modal con Promise y ejecutar callback
+                showConfirmModal(title, message, type).then(result => {
+                    if (result) {
+                        callback();
+                    }
+                });
+            } else {
+                // Si no hay callback, solo mostrar modal informativo
+                return showConfirmModal(title, message, type);
+            }
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
         // VERIFICACIÓN DE CONECTIVIDAD
         async function verificarConectividad() {
             try {
@@ -4200,29 +4297,6 @@ Generado por DPI Sistema de Ventas`.trim();
             const modal = document.getElementById('detalleModal');
             if (event && event.target !== modal) return;
             if (modal) modal.remove();
-        }
-
-        // FUNCIONES AUXILIARES PARA MODAL
-        function closeModal() {
-            const overlay = document.getElementById('modalOverlay');
-            if (overlay) {
-                overlay.classList.remove('active');
-            }
-        }
-
-        // Para compatibilidad con usos existentes
-        function showModal(title, message, type = 'confirm', callback = null) {
-            if (callback && typeof callback === 'function') {
-                // Si se proporciona callback, usar el modal con Promise y ejecutar callback
-                showConfirmModal(title, message, type).then(result => {
-                    if (result) {
-                        callback();
-                    }
-                });
-            } else {
-                // Si no hay callback, solo mostrar modal informativo
-                showConfirmModal(title, message, type);
-            }
         }
 
         // FUNCIÓN DE DIAGNÓSTICO MEJORADA
