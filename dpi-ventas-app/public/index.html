@@ -2119,11 +2119,15 @@
                 }
             });
             
-            // Cargar datos iniciales
-            fetchAllData();
-            cargarClientesPotenciales();
+            // Inicializar estado
             updateTime();
-            setInterval(updateTime, 60000); // Actualizar cada minuto
+            setInterval(updateTime, 60000);
+            
+            // Cargar datos iniciales después de un pequeño delay
+            setTimeout(() => {
+                fetchAllData();
+                cargarClientesPotenciales();
+            }, 500);
             
             console.log('✅ Sistema inicializado correctamente');
         });
@@ -2306,18 +2310,32 @@
 
         // CARGA DE DATOS
         async function fetchAllData() {
+            console.log('🔄 Iniciando carga de scripts...');
+            
             try {
                 showToast('🔄 Cargando scripts...', 'default');
                 const data = await apiCall('/api/scripts');
-                SCRIPTS_DATA = data;
                 
-                console.log('✅ Scripts cargados:', SCRIPTS_DATA);
+                // Verificar que data es un objeto válido
+                if (data && typeof data === 'object') {
+                    SCRIPTS_DATA = data;
+                    console.log('✅ Scripts cargados exitosamente:', Object.keys(SCRIPTS_DATA));
+                    
+                    // Solo renderizar si estamos en la vista de scripts
+                    if (currentView === 'scripts') {
+                        setTimeout(() => renderScripts(), 100);
+                    }
+                    
+                    updateStats();
+                    showToast('✅ Scripts cargados exitosamente', 'success');
+                } else {
+                    throw new Error('Datos inválidos recibidos del servidor');
+                }
                 
-                renderScripts();
-                updateStats();
-                showToast('✅ Scripts cargados exitosamente', 'success');
             } catch (error) {
                 console.error('❌ Error al cargar scripts:', error);
+                
+                // Inicializar con estructura vacía para evitar errores
                 SCRIPTS_DATA = {
                     bienvenida: [],
                     calificacion: [],
@@ -2325,31 +2343,62 @@
                     seguimiento: [],
                     cierre: []
                 };
-                renderScripts();
+                
+                // Solo renderizar si estamos en la vista de scripts
+                if (currentView === 'scripts') {
+                    setTimeout(() => renderScripts(), 100);
+                }
+                
+                updateStats();
                 showToast('❌ Error al cargar scripts. Usando modo offline.', 'error');
             }
         }
 
         async function cargarClientesPotenciales() {
+            console.log('🔄 Cargando clientes potenciales...');
+            
             try {
                 const data = await apiCall('/api/clientes-potenciales');
-                CLIENTES_POTENCIALES = data;
-                renderClientes();
-                updateClientesCount();
+                
+                if (Array.isArray(data)) {
+                    CLIENTES_POTENCIALES = data;
+                    console.log('✅ Clientes cargados:', CLIENTES_POTENCIALES.length);
+                    
+                    // Solo renderizar si estamos en la vista de clientes
+                    if (currentView === 'clientes') {
+                        setTimeout(() => renderClientes(), 100);
+                    }
+                    
+                    updateClientesCount();
+                } else {
+                    throw new Error('Datos de clientes inválidos');
+                }
+                
             } catch (error) {
-                console.error('Error al cargar clientes:', error);
+                console.error('❌ Error al cargar clientes:', error);
                 CLIENTES_POTENCIALES = [];
-                renderClientes();
-                showToast('Error al cargar perfiles de clientes', 'error');
+                
+                // Solo renderizar si estamos en la vista de clientes
+                if (currentView === 'clientes') {
+                    setTimeout(() => renderClientes(), 100);
+                }
+                
+                updateClientesCount();
+                showToast('❌ Error al cargar perfiles de clientes', 'error');
             }
         }
 
         // NAVEGACIÓN
         function showView(view) {
+            console.log('🎯 Navegando a vista:', view);
+            
             // Actualizar navegación (excepto para admin)
             if (view !== 'admin') {
                 document.querySelectorAll('.action-card').forEach(card => card.classList.remove('active'));
-                document.getElementById(`card-${view}`)?.classList.add('active');
+                const cardElement = document.getElementById(`card-${view}`);
+                if (cardElement) {
+                    cardElement.classList.add('active');
+                }
             }
             
             // Ocultar todas las vistas
@@ -2367,13 +2416,13 @@
             
             currentView = view;
             
-            // Cargar datos específicos si es necesario
+            // Cargar datos específicos SOLO si es necesario y no estamos ya en esa vista
             if (view === 'scripts' && Object.keys(SCRIPTS_DATA).length > 0) {
-                renderScripts();
+                setTimeout(() => renderScripts(), 100);
             } else if (view === 'clientes' && CLIENTES_POTENCIALES.length > 0) {
-                renderClientes();
+                setTimeout(() => renderClientes(), 100);
             } else if (view === 'admin') {
-                renderAdminList();
+                setTimeout(() => renderAdminList(), 100);
             }
         }
 
@@ -2401,6 +2450,8 @@
 
         // SCRIPTS
         function renderScripts() {
+            console.log('📝 Renderizando scripts...');
+            
             const tabsContainer = document.getElementById('scriptsTabs');
             const scriptsContainer = document.getElementById('scriptsGrid');
             
@@ -2409,33 +2460,42 @@
                 return;
             }
             
-            // Crear tabs
-            const categoryNames = {
-                bienvenida: "💬 Bienvenida", 
-                calificacion: "🔍 Calificación", 
-                objeciones: "🛡️ Objeciones", 
-                seguimiento: "📞 Seguimiento", 
-                cierre: "🎯 Cierre"
-            };
+            // Verificar si ya se han renderizado los tabs para evitar re-renderizado
+            if (tabsContainer.children.length === 0) {
+                // Crear tabs solo si no existen
+                const categoryNames = {
+                    bienvenida: "💬 Bienvenida", 
+                    calificacion: "🔍 Calificación", 
+                    objeciones: "🛡️ Objeciones", 
+                    seguimiento: "📞 Seguimiento", 
+                    cierre: "🎯 Cierre"
+                };
+                
+                Object.keys(categoryNames).forEach((category, index) => {
+                    const tab = document.createElement('button');
+                    tab.className = `script-tab ${index === 0 ? 'active' : ''}`;
+                    tab.textContent = categoryNames[category];
+                    tab.setAttribute('data-category', category);
+                    
+                    // Usar addEventListener en lugar de onclick para evitar problemas
+                    tab.addEventListener('click', () => {
+                        showScriptsTab(category);
+                    });
+                    
+                    tabsContainer.appendChild(tab);
+                });
+            }
             
-            tabsContainer.innerHTML = '';
-            Object.keys(categoryNames).forEach((category, index) => {
-                const tab = document.createElement('button');
-                tab.className = `script-tab ${index === 0 ? 'active' : ''}`;
-                tab.textContent = categoryNames[category];
-                tab.onclick = () => showScriptsTab(category);
-                tab.setAttribute('data-category', category);
-                tabsContainer.appendChild(tab);
-            });
-            
-            // Mostrar primera categoría por defecto
-            showScriptsTab('bienvenida');
+            // Solo mostrar la primera categoría si no hay una ya seleccionada
+            if (scriptsContainer.innerHTML.includes('Cargando scripts...')) {
+                showScriptsTabContent('bienvenida');
+            }
         }
 
         function showScriptsTab(category) {
-            console.log('📝 Mostrando scripts de categoría:', category);
+            console.log('📂 Cambiando a tab:', category);
             
-            // Actualizar tabs
+            // Actualizar tabs activos
             document.querySelectorAll('.script-tab').forEach(t => t.classList.remove('active'));
             
             // Activar tab correcto
@@ -2444,6 +2504,11 @@
                 activeTab.classList.add('active');
             }
             
+            // Mostrar contenido del tab
+            showScriptsTabContent(category);
+        }
+
+        function showScriptsTabContent(category) {
             const scriptsContainer = document.getElementById('scriptsGrid');
             if (!scriptsContainer) return;
             
@@ -3107,16 +3172,21 @@ Generado por DPI Sistema de Ventas`.trim();
             // Encontrar la categoría del script
             let categoryKey = null;
             for (const category in SCRIPTS_DATA) {
-                if (SCRIPTS_DATA[category].some(s => s.id == id)) {
+                if (SCRIPTS_DATA[category] && SCRIPTS_DATA[category].some(s => s.id == id)) {
                     categoryKey = category;
                     break;
                 }
             }
             
             if (categoryKey) {
-                showView('scripts');
+                // Navegar a scripts si no estamos ahí
+                if (currentView !== 'scripts') {
+                    showView('scripts');
+                }
+                
+                // Cambiar al tab correcto y buscar el script
                 setTimeout(() => {
-                    showScriptsTab(categoryKey);
+                    changeScriptTab(categoryKey);
                     
                     setTimeout(() => {
                         const card = document.querySelector(`.script-card[data-script-id="${id}"]`);
@@ -3130,30 +3200,46 @@ Generado por DPI Sistema de Ventas`.trim();
                             setTimeout(() => {
                                 card.style.backgroundColor = '';
                             }, 2000);
+                        } else {
+                            console.warn('⚠️ Script card no encontrado para ID:', id);
                         }
-                    }, 100);
-                }, 100);
+                    }, 200);
+                }, 200);
             } else {
-                showToast('Script no encontrado en la vista actual', 'error');
+                console.warn('⚠️ Categoría no encontrada para script ID:', id);
+                showToast('❌ Script no encontrado en la vista actual', 'error');
             }
         }
 
         // NAVEGACIÓN DE PROCESO
         function showScriptsTab(category) {
-            showView('scripts');
+            // Si estamos en otra vista, navegar primero a scripts
+            if (currentView !== 'scripts') {
+                showView('scripts');
+                // Esperar a que se renderice y luego cambiar tab
+                setTimeout(() => {
+                    changeScriptTab(category);
+                }, 200);
+            } else {
+                // Ya estamos en scripts, solo cambiar tab
+                changeScriptTab(category);
+            }
+        }
+
+        function changeScriptTab(category) {
+            console.log('📂 Cambiando a tab:', category);
             
-            setTimeout(() => {
-                // Actualizar tabs
-                document.querySelectorAll('.script-tab').forEach(t => t.classList.remove('active'));
-                
-                // Buscar el tab correcto
-                document.querySelectorAll('.script-tab').forEach(tab => {
-                    if (tab.textContent.toLowerCase().includes(category)) {
-                        tab.classList.add('active');
-                        tab.click();
-                    }
-                });
-            }, 100);
+            // Actualizar tabs activos
+            document.querySelectorAll('.script-tab').forEach(t => t.classList.remove('active'));
+            
+            // Activar tab correcto
+            const activeTab = document.querySelector(`[data-category="${category}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            
+            // Mostrar contenido del tab
+            showScriptsTabContent(category);
         }
 
         // UTILIDADES
@@ -3208,6 +3294,8 @@ Generado por DPI Sistema de Ventas`.trim();
         window.showView = showView;
         window.handleSemaforo = handleSemaforo;
         window.showScriptsTab = showScriptsTab;
+        window.changeScriptTab = changeScriptTab;
+        window.showScriptsTabContent = showScriptsTabContent;
         window.toggleScriptText = toggleScriptText;
         window.copyAndTrack = copyAndTrack;
         window.cambiarVista = cambiarVista;
