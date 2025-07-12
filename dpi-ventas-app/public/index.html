@@ -1225,7 +1225,104 @@
 
         .toast-icon { font-size: 18px; }
 
-        /* AUTH OVERLAY */
+        /* MODALS */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h3 {
+            color: var(--dark);
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .modal p {
+            color: var(--neutral);
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .modal-btn.primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .modal-btn.primary:hover {
+            background: #0056B3;
+        }
+
+        .modal-btn.danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .modal-btn.danger:hover {
+            background: #dc1f2f;
+        }
+
+        .modal-btn.secondary {
+            background: var(--light);
+            color: var(--neutral);
+            border: 1px solid var(--border);
+        }
+
+        .modal-btn.secondary:hover {
+            background: var(--border);
+        }
+
+        /* AUTH MODAL ESPECÍFICO */
         .auth-overlay {
             position: fixed;
             top: 0;
@@ -1252,6 +1349,7 @@
             max-width: 400px;
             text-align: center;
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
         }
 
         .auth-input {
@@ -1953,6 +2051,18 @@
             <span class="toast-text">Información actualizada</span>
         </div>
 
+        <!-- MODAL PERSONALIZADO -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal">
+                <h3 id="modalTitle">Confirmar Acción</h3>
+                <p id="modalMessage">¿Estás seguro de que quieres realizar esta acción?</p>
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" onclick="closeModal()">Cancelar</button>
+                    <button class="modal-btn primary" id="modalConfirmBtn" onclick="confirmModal()">Aceptar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- AUTH OVERLAY -->
         <div class="auth-overlay" id="authOverlay">
             <div class="auth-modal">
@@ -1984,6 +2094,7 @@
         let currentView = 'semaforo';
         let currentScriptTab = 'bienvenida';
         let currentClienteView = 'cards';
+        let modalCallback = null;
 
         // INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
@@ -2016,6 +2127,42 @@
             
             console.log('✅ Sistema inicializado correctamente');
         });
+
+        // MODAL PERSONALIZADO
+        function showModal(title, message, type = 'confirm', callback = null) {
+            const overlay = document.getElementById('modalOverlay');
+            const titleEl = document.getElementById('modalTitle');
+            const messageEl = document.getElementById('modalMessage');
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            // Configurar botón según el tipo
+            if (type === 'danger') {
+                confirmBtn.className = 'modal-btn danger';
+                confirmBtn.textContent = 'Eliminar';
+            } else {
+                confirmBtn.className = 'modal-btn primary';
+                confirmBtn.textContent = 'Aceptar';
+            }
+            
+            modalCallback = callback;
+            overlay.classList.add('active');
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            modalCallback = null;
+        }
+
+        function confirmModal() {
+            closeModal();
+            if (modalCallback) {
+                modalCallback();
+            }
+        }
 
         // ACTUALIZAR TIEMPO
         function updateTime() {
@@ -2117,6 +2264,9 @@
                     }
                 });
                 
+                // Actualizar estado del sistema
+                updateSystemStatus(true);
+                
                 if (!response.ok) {
                     let errorData;
                     try {
@@ -2134,21 +2284,49 @@
                     return await response.blob();
                 }
             } catch (error) {
-                showToast(`Error de conexión: ${error.message}`, 'error');
+                console.error('❌ Error en API call:', error);
+                updateSystemStatus(false);
                 throw error;
+            }
+        }
+
+        function updateSystemStatus(isOnline) {
+            const statusIcon = document.getElementById('systemStatusIcon');
+            
+            if (statusIcon) {
+                if (isOnline) {
+                    statusIcon.textContent = '✅';
+                    statusIcon.style.color = 'var(--success)';
+                } else {
+                    statusIcon.textContent = '❌';
+                    statusIcon.style.color = 'var(--danger)';
+                }
             }
         }
 
         // CARGA DE DATOS
         async function fetchAllData() {
             try {
+                showToast('🔄 Cargando scripts...', 'default');
                 const data = await apiCall('/api/scripts');
                 SCRIPTS_DATA = data;
+                
+                console.log('✅ Scripts cargados:', SCRIPTS_DATA);
+                
                 renderScripts();
                 updateStats();
+                showToast('✅ Scripts cargados exitosamente', 'success');
             } catch (error) {
-                console.error('Error al cargar scripts:', error);
-                showToast('Error al cargar scripts', 'error');
+                console.error('❌ Error al cargar scripts:', error);
+                SCRIPTS_DATA = {
+                    bienvenida: [],
+                    calificacion: [],
+                    objeciones: [],
+                    seguimiento: [],
+                    cierre: []
+                };
+                renderScripts();
+                showToast('❌ Error al cargar scripts. Usando modo offline.', 'error');
             }
         }
 
@@ -2160,15 +2338,17 @@
                 updateClientesCount();
             } catch (error) {
                 console.error('Error al cargar clientes:', error);
+                CLIENTES_POTENCIALES = [];
+                renderClientes();
                 showToast('Error al cargar perfiles de clientes', 'error');
             }
         }
 
         // NAVEGACIÓN
         function showView(view) {
-            // Actualizar navegación
-            document.querySelectorAll('.action-card').forEach(card => card.classList.remove('active'));
+            // Actualizar navegación (excepto para admin)
             if (view !== 'admin') {
+                document.querySelectorAll('.action-card').forEach(card => card.classList.remove('active'));
                 document.getElementById(`card-${view}`)?.classList.add('active');
             }
             
@@ -2224,7 +2404,10 @@
             const tabsContainer = document.getElementById('scriptsTabs');
             const scriptsContainer = document.getElementById('scriptsGrid');
             
-            if (!tabsContainer || !scriptsContainer) return;
+            if (!tabsContainer || !scriptsContainer) {
+                console.warn('⚠️ Contenedores de scripts no encontrados');
+                return;
+            }
             
             // Crear tabs
             const categoryNames = {
@@ -2241,6 +2424,7 @@
                 tab.className = `script-tab ${index === 0 ? 'active' : ''}`;
                 tab.textContent = categoryNames[category];
                 tab.onclick = () => showScriptsTab(category);
+                tab.setAttribute('data-category', category);
                 tabsContainer.appendChild(tab);
             });
             
@@ -2249,17 +2433,15 @@
         }
 
         function showScriptsTab(category) {
+            console.log('📝 Mostrando scripts de categoría:', category);
+            
             // Actualizar tabs
             document.querySelectorAll('.script-tab').forEach(t => t.classList.remove('active'));
-            event?.target?.classList.add('active');
             
-            // Buscar el tab correcto si no se clickeó directamente
-            if (!event?.target) {
-                document.querySelectorAll('.script-tab').forEach(tab => {
-                    if (tab.textContent.toLowerCase().includes(category)) {
-                        tab.classList.add('active');
-                    }
-                });
+            // Activar tab correcto
+            const activeTab = document.querySelector(`[data-category="${category}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
             }
             
             const scriptsContainer = document.getElementById('scriptsGrid');
@@ -2267,8 +2449,16 @@
             
             const scripts = SCRIPTS_DATA[category] || [];
             
+            console.log(`📊 Scripts en ${category}:`, scripts.length);
+            
             if (scripts.length === 0) {
-                scriptsContainer.innerHTML = '<div class="loading">No hay scripts en esta categoría</div>';
+                scriptsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: var(--neutral);">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📝</div>
+                        <h3 style="margin-bottom: 10px;">No hay scripts en esta categoría</h3>
+                        <p>Los scripts aparecerán aquí cuando se carguen desde el servidor.</p>
+                    </div>
+                `;
                 return;
             }
             
@@ -2536,24 +2726,27 @@
             const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
             if (!cliente) return;
             
-            if (!confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
-                return;
-            }
-            
-            try {
-                await apiCall(`/api/clientes-potenciales/${id}`, { 
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                });
-                
-                CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
-                renderClientes();
-                updateClientesCount();
-                showToast('Cliente eliminado exitosamente', 'success');
-                
-            } catch (error) {
-                showToast(`Error al eliminar cliente: ${error.message}`, 'error');
-            }
+            showModal(
+                '🗑️ Eliminar Cliente', 
+                `¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`,
+                'danger',
+                async () => {
+                    try {
+                        await apiCall(`/api/clientes-potenciales/${id}`, { 
+                            method: 'DELETE',
+                            headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                        });
+                        
+                        CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                        renderClientes();
+                        updateClientesCount();
+                        showToast('✅ Cliente eliminado exitosamente', 'success');
+                        
+                    } catch (error) {
+                        showToast(`❌ Error al eliminar cliente: ${error.message}`, 'error');
+                    }
+                }
+            );
         }
 
         function copiarPerfil(id) {
@@ -2808,23 +3001,26 @@ Generado por DPI Sistema de Ventas`.trim();
                 }
             }
             
-            if (!confirm(`¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`)) {
-                return;
-            }
-            
-            try {
-                await apiCall(`/api/scripts/${id}`, { 
-                    method: 'DELETE', 
-                    headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                });
-                
-                showToast('Script eliminado exitosamente', 'success');
-                await fetchAllData();
-                renderAdminList();
-                
-            } catch (error) {
-                showToast(`Error al eliminar script: ${error.message}`, 'error');
-            }
+            showModal(
+                '🗑️ Eliminar Script',
+                `¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`,
+                'danger',
+                async () => {
+                    try {
+                        await apiCall(`/api/scripts/${id}`, { 
+                            method: 'DELETE', 
+                            headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                        });
+                        
+                        showToast('✅ Script eliminado exitosamente', 'success');
+                        await fetchAllData();
+                        renderAdminList();
+                        
+                    } catch (error) {
+                        showToast(`❌ Error al eliminar script: ${error.message}`, 'error');
+                    }
+                }
+            );
         }
 
         // BÚSQUEDA
@@ -3026,6 +3222,9 @@ Generado por DPI Sistema de Ventas`.trim();
         window.clearForm = clearForm;
         window.renderAdminList = renderAdminList;
         window.scrollToScript = scrollToScript;
+        window.showModal = showModal;
+        window.closeModal = closeModal;
+        window.confirmModal = confirmModal;
     </script>
 </body>
 </html>
