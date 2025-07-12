@@ -2253,14 +2253,14 @@
             <span class="toast-text">Información actualizada</span>
         </div>
 
-        <!-- MODAL PERSONALIZADO -->
+        <!-- MODAL PERSONALIZADO SIMPLIFICADO -->
         <div class="modal-overlay" id="modalOverlay">
             <div class="modal">
                 <h3 id="modalTitle">Confirmar Acción</h3>
                 <p id="modalMessage">¿Estás seguro de que quieres realizar esta acción?</p>
                 <div class="modal-actions">
-                    <button class="modal-btn secondary" onclick="closeModal()">Cancelar</button>
-                    <button class="modal-btn primary" id="modalConfirmBtn" onclick="confirmModal()">Aceptar</button>
+                    <button class="modal-btn secondary">Cancelar</button>
+                    <button class="modal-btn primary" id="modalConfirmBtn">Aceptar</button>
                 </div>
             </div>
         </div>
@@ -2391,12 +2391,20 @@
             console.log('✅ Sistema inicializado correctamente');
         });
 
-        // MODAL PERSONALIZADO
+        // MODAL PERSONALIZADO CORREGIDO
         function showModal(title, message, type = 'confirm', callback = null) {
+            console.log('🔔 Mostrando modal:', title);
+            console.log('🔔 Callback recibido:', typeof callback);
+            
             const overlay = document.getElementById('modalOverlay');
             const titleEl = document.getElementById('modalTitle');
             const messageEl = document.getElementById('modalMessage');
             const confirmBtn = document.getElementById('modalConfirmBtn');
+            
+            if (!overlay || !titleEl || !messageEl || !confirmBtn) {
+                console.error('❌ Elementos del modal no encontrados');
+                return;
+            }
             
             titleEl.textContent = title;
             messageEl.textContent = message;
@@ -2410,20 +2418,41 @@
                 confirmBtn.textContent = 'Aceptar';
             }
             
-            modalCallback = callback;
+            // Limpiar eventos anteriores
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            // Agregar evento de confirmación
+            newConfirmBtn.addEventListener('click', () => {
+                console.log('✅ Botón confirmar presionado');
+                overlay.classList.remove('active');
+                if (callback && typeof callback === 'function') {
+                    console.log('🔄 Ejecutando callback...');
+                    callback();
+                } else {
+                    console.warn('⚠️ No hay callback válido para ejecutar');
+                }
+            });
+            
+            // Agregar evento de cancelar
+            const cancelBtn = overlay.querySelector('.modal-btn.secondary');
+            if (cancelBtn) {
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                newCancelBtn.addEventListener('click', () => {
+                    console.log('❌ Botón cancelar presionado');
+                    overlay.classList.remove('active');
+                });
+            }
+            
             overlay.classList.add('active');
+            console.log('✅ Modal mostrado');
         }
 
         function closeModal() {
             const overlay = document.getElementById('modalOverlay');
-            overlay.classList.remove('active');
-            modalCallback = null;
-        }
-
-        function confirmModal() {
-            closeModal();
-            if (modalCallback) {
-                modalCallback();
+            if (overlay) {
+                overlay.classList.remove('active');
             }
         }
 
@@ -3344,7 +3373,10 @@
             }
         }
 
+        // FUNCIÓN RESTAURAR BACKUP SIMPLIFICADA
         async function restaurarBackup() {
+            console.log('📤 === RESTAURACIÓN DIRECTA DE BACKUP ===');
+            
             const fileInput = document.getElementById('backupFile');
             const file = fileInput.files[0];
             
@@ -3358,48 +3390,65 @@
                 return;
             }
 
-            showModal(
-                '🚨 Restaurar Base de Datos',
-                `¿Estás seguro de que quieres restaurar desde "${file.name}"?\n\n⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES y reiniciará el servidor automáticamente.`,
-                'danger',
-                async () => {
-                    try {
-                        showBackupStatus('📤 Iniciando restauración...', 'info', 'restoreStatus');
+            console.log('📄 Archivo seleccionado:', file.name, file.size, 'bytes');
 
-                        const formData = new FormData();
-                        formData.append('backup', file);
+            // Confirmación simple con confirm() nativo
+            const confirmacion = confirm(`¿Estás seguro de que quieres restaurar desde "${file.name}"?\n\n⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES y reiniciará el servidor automáticamente.\n\n¿Continuar?`);
+            
+            if (!confirmacion) {
+                console.log('❌ Usuario canceló la restauración');
+                return;
+            }
+            
+            console.log('✅ Usuario confirmó restauración, procediendo...');
 
-                        const response = await fetch(`${API_BASE_URL}/api/restore`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Bearer DPI2025Admin'
-                            },
-                            body: formData
-                        });
+            try {
+                showBackupStatus('📤 Iniciando restauración...', 'info', 'restoreStatus');
 
-                        const result = await response.json();
+                const formData = new FormData();
+                formData.append('backup', file);
 
-                        if (!response.ok) {
-                            throw new Error(result.error || `Error del servidor: ${response.status}`);
-                        }
+                console.log('🔗 Enviando archivo al servidor...');
 
-                        showBackupStatus('✅ Restauración completada. El servidor se reiniciará...', 'success', 'restoreStatus');
-                        showToast('✅ Restauración exitosa. El servidor se reiniciará automáticamente.', 'success');
+                const response = await fetch(`${API_BASE_URL}/api/restore`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer DPI2025Admin'
+                        // No agregar Content-Type para FormData, el navegador lo hace automáticamente
+                    },
+                    body: formData
+                });
 
-                        fileInput.value = '';
-                        document.getElementById('restoreBtn').disabled = true;
+                console.log('📊 Response status:', response.status);
 
-                        setTimeout(() => {
-                            showModal('🔄 Reiniciando Servidor', 'El servidor se está reiniciando.\n\nPor favor, recarga la página en unos segundos.', 'info');
-                        }, 2000);
-
-                    } catch (error) {
-                        console.error('❌ Error en restauración:', error);
-                        showBackupStatus(`❌ Error: ${error.message}`, 'error', 'restoreStatus');
-                        showToast('❌ Error durante la restauración: ' + error.message, 'error');
-                    }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Error del servidor:', errorText);
+                    throw new Error(`Error ${response.status}: ${errorText}`);
                 }
-            );
+
+                const result = await response.json();
+                console.log('✅ Resultado de restauración:', result);
+
+                showBackupStatus('✅ Restauración completada. El servidor se reiniciará...', 'success', 'restoreStatus');
+                showToast('✅ Restauración exitosa. El servidor se reiniciará automáticamente.', 'success');
+
+                // Limpiar input
+                fileInput.value = '';
+                document.getElementById('restoreBtn').disabled = true;
+
+                // Notificar sobre reinicio
+                setTimeout(() => {
+                    alert('🔄 Reiniciando Servidor\n\nEl servidor se está reiniciando.\n\nPor favor, recarga la página en unos segundos.');
+                }, 2000);
+
+                console.log('✅ === RESTAURACIÓN COMPLETADA ===');
+
+            } catch (error) {
+                console.error('❌ Error en restauración:', error);
+                showBackupStatus(`❌ Error: ${error.message}`, 'error', 'restoreStatus');
+                showToast('❌ Error durante la restauración: ' + error.message, 'error');
+            }
         }
 
         function showBackupStatus(message, type, containerId) {
@@ -3521,96 +3570,83 @@
             }
         }
 
-        // FUNCIÓN ELIMINAR CLIENTE MEJORADA
+        // FUNCIÓN ELIMINAR CLIENTE SIMPLIFICADA Y DIRECTA
         async function eliminarCliente(id) {
-            console.log('🗑️ === INICIANDO ELIMINACIÓN DE CLIENTE ===');
-            console.log('🆔 Cliente ID:', id);
-            console.log('📊 Total clientes actuales:', CLIENTES_POTENCIALES.length);
+            console.log('🗑️ === ELIMINACIÓN DIRECTA DE CLIENTE ===');
+            console.log('🆔 Cliente ID recibido:', id, typeof id);
             
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id == id); // Usar == para comparación flexible
+            // Convertir a número si es string
+            const clienteId = parseInt(id);
+            console.log('🆔 Cliente ID convertido:', clienteId);
+            
+            const cliente = CLIENTES_POTENCIALES.find(c => parseInt(c.id) === clienteId);
             if (!cliente) {
-                console.error('❌ Cliente no encontrado en la lista local:', id);
-                console.log('📋 IDs disponibles:', CLIENTES_POTENCIALES.map(c => c.id));
-                showToast('❌ Cliente no encontrado en la lista local', 'error');
+                console.error('❌ Cliente no encontrado:', clienteId);
+                console.log('📋 IDs disponibles:', CLIENTES_POTENCIALES.map(c => ({id: c.id, tipo: typeof c.id})));
+                showToast('❌ Cliente no encontrado', 'error');
                 return;
             }
             
-            console.log('✅ Cliente encontrado:', {
-                id: cliente.id,
-                nombre: cliente.nombre,
-                tipo: cliente.tipo
-            });
+            console.log('✅ Cliente encontrado:', cliente.nombre);
             
-            showModal(
-                '🗑️ Eliminar Cliente', 
-                `¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`,
-                'danger',
-                async () => {
-                    try {
-                        console.log('🔄 Iniciando llamada a API para eliminar...');
-                        
-                        const deleteUrl = `/api/clientes-potenciales/${id}`;
-                        console.log('🔗 URL de eliminación:', `${API_BASE_URL}${deleteUrl}`);
-                        
-                        // Mostrar toast de progreso
-                        showToast('🔄 Eliminando cliente...', 'default');
-                        
-                        const response = await apiCall(deleteUrl, { 
-                            method: 'DELETE',
-                            headers: { 
-                                'Authorization': 'Bearer DPI2025Admin',
-                                'Content-Type': 'application/json'
-                            } 
-                        });
-                        
-                        console.log('✅ Respuesta del servidor:', response);
-                        console.log('✅ Cliente eliminado del servidor exitosamente');
-                        
-                        // Actualizar la lista local - usar == para comparación flexible
-                        const clientesAnteriores = CLIENTES_POTENCIALES.length;
-                        CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id != id);
-                        
-                        console.log('📊 Clientes antes:', clientesAnteriores);
-                        console.log('📊 Clientes después:', CLIENTES_POTENCIALES.length);
-                        console.log('✅ Cliente removido de la lista local');
-                        
-                        // Verificar que efectivamente se eliminó
-                        if (CLIENTES_POTENCIALES.length === clientesAnteriores) {
-                            console.warn('⚠️ ADVERTENCIA: La lista local no cambió de tamaño');
-                        }
-                        
-                        // Re-renderizar la vista
-                        console.log('🔄 Re-renderizando vista de clientes...');
-                        renderClientes();
-                        updateClientesCount();
-                        
-                        showToast('✅ Cliente eliminado exitosamente', 'success');
-                        console.log('✅ === ELIMINACIÓN COMPLETADA ===');
-                        
-                    } catch (error) {
-                        console.error('❌ === ERROR EN ELIMINACIÓN ===');
-                        console.error('❌ Tipo de error:', error.name);
-                        console.error('❌ Mensaje:', error.message);
-                        console.error('❌ Stack trace:', error.stack);
-                        
-                        let errorMessage = 'Error desconocido';
-                        if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
-                            errorMessage = 'Error de conexión con el servidor';
-                        } else if (error.message.includes('404')) {
-                            errorMessage = 'Cliente no encontrado en el servidor';
-                        } else if (error.message.includes('403')) {
-                            errorMessage = 'No tienes permisos para eliminar clientes';
-                        } else if (error.message.includes('500')) {
-                            errorMessage = 'Error interno del servidor';
-                        } else {
-                            errorMessage = error.message;
-                        }
-                        
-                        showToast(`❌ Error al eliminar cliente: ${errorMessage}`, 'error');
-                        console.log('❌ === FIN ERROR ===');
-                    }
+            // Confirmación simple con confirm() nativo
+            const confirmacion = confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`);
+            
+            if (!confirmacion) {
+                console.log('❌ Usuario canceló la eliminación');
+                return;
+            }
+            
+            console.log('✅ Usuario confirmó eliminación, procediendo...');
+            
+            try {
+                showToast('🔄 Eliminando cliente...', 'default');
+                
+                const deleteUrl = `/api/clientes-potenciales/${clienteId}`;
+                console.log('🔗 Enviando DELETE a:', `${API_BASE_URL}${deleteUrl}`);
+                
+                const response = await fetch(`${API_BASE_URL}${deleteUrl}`, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Authorization': 'Bearer DPI2025Admin',
+                        'Content-Type': 'application/json'
+                    } 
+                });
+                
+                console.log('📊 Response status:', response.status);
+                console.log('📊 Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Error del servidor:', errorText);
+                    throw new Error(`Error ${response.status}: ${errorText}`);
                 }
-            );
+                
+                const result = await response.json();
+                console.log('✅ Respuesta del servidor:', result);
+                
+                // Actualizar lista local
+                const indexToRemove = CLIENTES_POTENCIALES.findIndex(c => parseInt(c.id) === clienteId);
+                if (indexToRemove !== -1) {
+                    CLIENTES_POTENCIALES.splice(indexToRemove, 1);
+                    console.log('✅ Cliente removido del array local');
+                } else {
+                    console.warn('⚠️ Cliente no encontrado en array local para remover');
+                }
+                
+                console.log('📊 Clientes restantes:', CLIENTES_POTENCIALES.length);
+                
+                // Re-renderizar
+                renderClientes();
+                updateClientesCount();
+                
+                showToast('✅ Cliente eliminado exitosamente', 'success');
+                console.log('✅ === ELIMINACIÓN COMPLETADA ===');
+                
+            } catch (error) {
+                console.error('❌ Error en eliminación:', error);
+                showToast(`❌ Error: ${error.message}`, 'error');
+            }
         }
 
         function copiarPerfil(id) {
@@ -3855,36 +3891,76 @@ Generado por DPI Sistema de Ventas`.trim();
             }
         }
 
+        // FUNCIÓN ELIMINAR SCRIPT SIMPLIFICADA
         async function deleteScript(id) {
+            console.log('🗑️ === ELIMINACIÓN DIRECTA DE SCRIPT ===');
+            console.log('🆔 Script ID:', id);
+            
             let scriptTitle = `ID ${id}`;
+            let scriptFound = null;
+            
+            // Buscar el script en todas las categorías
             for (const category in SCRIPTS_DATA) {
-                const found = SCRIPTS_DATA[category].find(s => s.id === id);
+                const found = SCRIPTS_DATA[category].find(s => s.id == id);
                 if (found) {
                     scriptTitle = found.title;
+                    scriptFound = found;
                     break;
                 }
             }
             
-            showModal(
-                '🗑️ Eliminar Script',
-                `¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`,
-                'danger',
-                async () => {
-                    try {
-                        await apiCall(`/api/scripts/${id}`, { 
-                            method: 'DELETE', 
-                            headers: { 'Authorization': 'Bearer DPI2025Admin' } 
-                        });
-                        
-                        showToast('✅ Script eliminado exitosamente', 'success');
-                        await fetchAllData();
-                        renderAdminList();
-                        
-                    } catch (error) {
-                        showToast(`❌ Error al eliminar script: ${error.message}`, 'error');
-                    }
+            if (!scriptFound) {
+                console.error('❌ Script no encontrado:', id);
+                showToast('❌ Script no encontrado', 'error');
+                return;
+            }
+            
+            console.log('✅ Script encontrado:', scriptTitle);
+            
+            // Confirmación simple con confirm() nativo
+            const confirmacion = confirm(`¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`);
+            
+            if (!confirmacion) {
+                console.log('❌ Usuario canceló la eliminación del script');
+                return;
+            }
+            
+            console.log('✅ Usuario confirmó eliminación del script, procediendo...');
+            
+            try {
+                showToast('🔄 Eliminando script...', 'default');
+                
+                const response = await fetch(`${API_BASE_URL}/api/scripts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Authorization': 'Bearer DPI2025Admin',
+                        'Content-Type': 'application/json'
+                    } 
+                });
+                
+                console.log('📊 Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Error del servidor:', errorText);
+                    throw new Error(`Error ${response.status}: ${errorText}`);
                 }
-            );
+                
+                const result = await response.json();
+                console.log('✅ Script eliminado del servidor:', result);
+                
+                showToast('✅ Script eliminado exitosamente', 'success');
+                
+                // Recargar datos
+                await fetchAllData();
+                renderAdminList();
+                
+                console.log('✅ === ELIMINACIÓN DE SCRIPT COMPLETADA ===');
+                
+            } catch (error) {
+                console.error('❌ Error eliminando script:', error);
+                showToast(`❌ Error: ${error.message}`, 'error');
+            }
         }
 
         // BÚSQUEDA
@@ -4110,7 +4186,7 @@ Generado por DPI Sistema de Ventas`.trim();
             if (modal) modal.remove();
         }
 
-        // FUNCIÓN DE DIAGNÓSTICO
+        // FUNCIÓN DE DIAGNÓSTICO MEJORADA
         window.diagnostico = function() {
             console.log('🔍 === DIAGNÓSTICO DEL SISTEMA ===');
             console.log('🌐 API Base URL:', API_BASE_URL);
@@ -4129,16 +4205,25 @@ Generado por DPI Sistema de Ventas`.trim();
                     console.error('❌ Test de conectividad falló:', error.message);
                 });
             
+            // Mostrar clientes disponibles para testing
+            if (CLIENTES_POTENCIALES.length > 0) {
+                console.log('👥 Clientes disponibles para testing:');
+                CLIENTES_POTENCIALES.forEach(c => {
+                    console.log(`   - ID: ${c.id} (${typeof c.id}) | Nombre: ${c.nombre}`);
+                });
+            }
+            
             return {
                 apiUrl: API_BASE_URL,
                 authenticated: isAuthenticated,
                 scriptsData: SCRIPTS_DATA,
                 clientesCount: CLIENTES_POTENCIALES.length,
-                currentView: currentView
+                currentView: currentView,
+                clientes: CLIENTES_POTENCIALES.map(c => ({id: c.id, nombre: c.nombre}))
             };
         };
 
-        // Hacer funciones globales para debugging
+        // Funciones de testing simplificadas
         window.testEliminarCliente = function(id) {
             console.log('🧪 Testing eliminar cliente:', id);
             eliminarCliente(id);
@@ -4147,6 +4232,17 @@ Generado por DPI Sistema de Ventas`.trim();
         window.testDescargarBackup = function() {
             console.log('🧪 Testing descargar backup...');
             descargarBackup();
+        };
+
+        window.testEliminarScript = function(id) {
+            console.log('🧪 Testing eliminar script:', id);
+            deleteScript(id);
+        };
+
+        window.testRestaurarBackup = function() {
+            console.log('🧪 Testing restaurar backup...');
+            console.log('ℹ️  Asegúrate de seleccionar un archivo .db primero');
+            restaurarBackup();
         };
 
         window.verificarConectividad = verificarConectividad;
@@ -4179,7 +4275,6 @@ Generado por DPI Sistema de Ventas`.trim();
         window.scrollToScript = scrollToScript;
         window.showModal = showModal;
         window.closeModal = closeModal;
-        window.confirmModal = confirmModal;
         window.descargarBackup = descargarBackup;
         window.restaurarBackup = restaurarBackup;
         window.showBackupStatus = showBackupStatus;
