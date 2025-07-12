@@ -2253,7 +2253,7 @@
             <span class="toast-text">Información actualizada</span>
         </div>
 
-        <!-- MODAL PERSONALIZADO SIMPLIFICADO -->
+        <!-- MODAL PERSONALIZADO MEJORADO -->
         <div class="modal-overlay" id="modalOverlay">
             <div class="modal">
                 <h3 id="modalTitle">Confirmar Acción</h3>
@@ -3373,9 +3373,9 @@
             }
         }
 
-        // FUNCIÓN RESTAURAR BACKUP SIMPLIFICADA
+        // FUNCIÓN RESTAURAR BACKUP CON MODAL PERSONALIZADO
         async function restaurarBackup() {
-            console.log('📤 === RESTAURACIÓN DIRECTA DE BACKUP ===');
+            console.log('📤 === RESTAURACIÓN CON MODAL PERSONALIZADO ===');
             
             const fileInput = document.getElementById('backupFile');
             const file = fileInput.files[0];
@@ -3392,8 +3392,12 @@
 
             console.log('📄 Archivo seleccionado:', file.name, file.size, 'bytes');
 
-            // Confirmación simple con confirm() nativo
-            const confirmacion = confirm(`¿Estás seguro de que quieres restaurar desde "${file.name}"?\n\n⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES y reiniciará el servidor automáticamente.\n\n¿Continuar?`);
+            // Usar modal personalizado con Promise
+            const confirmacion = await showConfirmModal(
+                '🚨 Restaurar Base de Datos',
+                `¿Estás seguro de que quieres restaurar desde "${file.name}"?\n\n⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES y reiniciará el servidor automáticamente.\n\n¿Continuar?`,
+                'danger'
+            );
             
             if (!confirmacion) {
                 console.log('❌ Usuario canceló la restauración');
@@ -3437,9 +3441,13 @@
                 fileInput.value = '';
                 document.getElementById('restoreBtn').disabled = true;
 
-                // Notificar sobre reinicio
-                setTimeout(() => {
-                    alert('🔄 Reiniciando Servidor\n\nEl servidor se está reiniciando.\n\nPor favor, recarga la página en unos segundos.');
+                // Notificar sobre reinicio con modal personalizado
+                setTimeout(async () => {
+                    await showConfirmModal(
+                        '🔄 Reiniciando Servidor',
+                        'El servidor se está reiniciando.\n\nPor favor, recarga la página en unos segundos.',
+                        'confirm'
+                    );
                 }, 2000);
 
                 console.log('✅ === RESTAURACIÓN COMPLETADA ===');
@@ -3570,9 +3578,9 @@
             }
         }
 
-        // FUNCIÓN ELIMINAR CLIENTE SIMPLIFICADA Y DIRECTA
+        // FUNCIÓN ELIMINAR CLIENTE CON MODAL PERSONALIZADO MEJORADO
         async function eliminarCliente(id) {
-            console.log('🗑️ === ELIMINACIÓN DIRECTA DE CLIENTE ===');
+            console.log('🗑️ === ELIMINACIÓN DE CLIENTE CON MODAL PERSONALIZADO ===');
             console.log('🆔 Cliente ID recibido:', id, typeof id);
             
             // Convertir a número si es string
@@ -3589,8 +3597,12 @@
             
             console.log('✅ Cliente encontrado:', cliente.nombre);
             
-            // Confirmación simple con confirm() nativo
-            const confirmacion = confirm(`¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`);
+            // Usar modal personalizado con Promise
+            const confirmacion = await showConfirmModal(
+                '🗑️ Eliminar Cliente',
+                `¿Estás seguro de que quieres eliminar a "${cliente.nombre}"?\n\nEsta acción no se puede deshacer.`,
+                'danger'
+            );
             
             if (!confirmacion) {
                 console.log('❌ Usuario canceló la eliminación');
@@ -3891,9 +3903,9 @@ Generado por DPI Sistema de Ventas`.trim();
             }
         }
 
-        // FUNCIÓN ELIMINAR SCRIPT SIMPLIFICADA
+        // FUNCIÓN ELIMINAR SCRIPT CON MODAL PERSONALIZADO
         async function deleteScript(id) {
-            console.log('🗑️ === ELIMINACIÓN DIRECTA DE SCRIPT ===');
+            console.log('🗑️ === ELIMINACIÓN DE SCRIPT CON MODAL PERSONALIZADO ===');
             console.log('🆔 Script ID:', id);
             
             let scriptTitle = `ID ${id}`;
@@ -3917,8 +3929,12 @@ Generado por DPI Sistema de Ventas`.trim();
             
             console.log('✅ Script encontrado:', scriptTitle);
             
-            // Confirmación simple con confirm() nativo
-            const confirmacion = confirm(`¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`);
+            // Usar modal personalizado con Promise
+            const confirmacion = await showConfirmModal(
+                '🗑️ Eliminar Script',
+                `¿Estás seguro de que quieres eliminar el script "${scriptTitle}"?\n\nEsta acción no se puede deshacer.`,
+                'danger'
+            );
             
             if (!confirmacion) {
                 console.log('❌ Usuario canceló la eliminación del script');
@@ -4186,6 +4202,29 @@ Generado por DPI Sistema de Ventas`.trim();
             if (modal) modal.remove();
         }
 
+        // FUNCIONES AUXILIARES PARA MODAL
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Para compatibilidad con usos existentes
+        function showModal(title, message, type = 'confirm', callback = null) {
+            if (callback && typeof callback === 'function') {
+                // Si se proporciona callback, usar el modal con Promise y ejecutar callback
+                showConfirmModal(title, message, type).then(result => {
+                    if (result) {
+                        callback();
+                    }
+                });
+            } else {
+                // Si no hay callback, solo mostrar modal informativo
+                showConfirmModal(title, message, type);
+            }
+        }
+
         // FUNCIÓN DE DIAGNÓSTICO MEJORADA
         window.diagnostico = function() {
             console.log('🔍 === DIAGNÓSTICO DEL SISTEMA ===');
@@ -4223,7 +4262,7 @@ Generado por DPI Sistema de Ventas`.trim();
             };
         };
 
-        // Funciones de testing simplificadas
+        // Funciones de testing mejoradas
         window.testEliminarCliente = function(id) {
             console.log('🧪 Testing eliminar cliente:', id);
             eliminarCliente(id);
@@ -4245,7 +4284,17 @@ Generado por DPI Sistema de Ventas`.trim();
             restaurarBackup();
         };
 
+        window.testModal = function() {
+            console.log('🧪 Testing modal personalizado...');
+            showConfirmModal('🧪 Test Modal', 'Este es un test del modal personalizado.\n¿Funciona correctamente?', 'confirm')
+                .then(result => {
+                    console.log('✅ Resultado del modal:', result);
+                    showToast(result ? '✅ Modal funcionando correctamente' : '❌ Modal cancelado', result ? 'success' : 'warning');
+                });
+        };
+
         window.verificarConectividad = verificarConectividad;
+        window.showConfirmModal = showConfirmModal;
 
         // Hacer funciones globales
         window.switchMode = switchMode;
