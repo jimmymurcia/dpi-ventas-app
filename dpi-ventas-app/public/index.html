@@ -2465,10 +2465,11 @@
             }
         }
 
-        // LLAMADAS A API
+        // LLAMADAS A API CORREGIDAS
         async function apiCall(endpoint, options = {}) {
             try {
                 const url = `${API_BASE_URL}${endpoint}`;
+                console.log(`🔗 API Call: ${options.method || 'GET'} ${url}`);
                 
                 const response = await fetch(url, {
                     ...options,
@@ -2493,8 +2494,11 @@
                 
                 const contentType = response.headers.get("content-type");
                 if (contentType?.includes("application/json")) {
-                    return await response.json();
+                    const data = await response.json();
+                    console.log(`✅ API Response:`, data);
+                    return data;
                 } else {
+                    // Para blobs (como backups)
                     return await response.blob();
                 }
             } catch (error) {
@@ -3144,42 +3148,67 @@
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        // BACKUP Y RESTORE
+        // BACKUP Y RESTORE CORREGIDOS
         async function descargarBackup() {
+            console.log('📥 Iniciando descarga de backup...');
+            
             try {
                 showBackupStatus('📥 Preparando backup...', 'info', 'backupStatus');
                 
-                const response = await fetch(`${API_BASE_URL}/api/backup`, {
+                // Construir la URL completa
+                const backupUrl = `${API_BASE_URL}/api/backup`;
+                console.log('🔗 URL de backup:', backupUrl);
+                
+                const response = await fetch(backupUrl, {
                     method: 'GET',
                     headers: {
-                        'Authorization': 'Bearer DPI2025Admin'
+                        'Authorization': 'Bearer DPI2025Admin',
+                        'Accept': 'application/octet-stream'
                     }
                 });
 
+                console.log('📊 Response status:', response.status);
+                console.log('📊 Response headers:', response.headers);
+
                 if (!response.ok) {
-                    throw new Error(`Error del servidor: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('❌ Error en respuesta del servidor:', errorText);
+                    throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
                 }
 
                 const timestamp = new Date().toISOString().split('T')[0];
                 const filename = `dpi_backup_${timestamp}.db`;
 
                 const blob = await response.blob();
+                console.log('📦 Blob size:', blob.size, 'bytes');
+                
+                if (blob.size === 0) {
+                    throw new Error('El archivo de backup está vacío');
+                }
+
+                // Crear y descargar el archivo
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = filename;
                 link.style.display = 'none';
+                
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
+                
+                // Limpiar el objeto URL
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
 
                 showBackupStatus(`✅ Backup descargado: ${filename}`, 'success', 'backupStatus');
                 showToast('✅ Backup completo descargado exitosamente', 'success');
 
             } catch (error) {
+                console.error('❌ Error completo en descarga de backup:', error);
                 showBackupStatus(`❌ Error: ${error.message}`, 'error', 'backupStatus');
-                showToast('❌ Error al descargar backup', 'error');
+                showToast('❌ Error al descargar backup: ' + error.message, 'error');
             }
         }
 
@@ -3233,8 +3262,9 @@
                         }, 2000);
 
                     } catch (error) {
+                        console.error('❌ Error en restauración:', error);
                         showBackupStatus(`❌ Error: ${error.message}`, 'error', 'restoreStatus');
-                        showToast('❌ Error durante la restauración', 'error');
+                        showToast('❌ Error durante la restauración: ' + error.message, 'error');
                     }
                 }
             );
@@ -3359,9 +3389,18 @@
             }
         }
 
+        // FUNCIÓN ELIMINAR CLIENTE CORREGIDA
         async function eliminarCliente(id) {
+            console.log('🗑️ Iniciando eliminación de cliente ID:', id);
+            
             const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
-            if (!cliente) return;
+            if (!cliente) {
+                console.error('❌ Cliente no encontrado en la lista local:', id);
+                showToast('❌ Cliente no encontrado', 'error');
+                return;
+            }
+            
+            console.log('✅ Cliente encontrado:', cliente.nombre);
             
             showModal(
                 '🗑️ Eliminar Cliente', 
@@ -3369,17 +3408,27 @@
                 'danger',
                 async () => {
                     try {
+                        console.log('🔗 Enviando DELETE a:', `/api/clientes-potenciales/${id}`);
+                        
                         await apiCall(`/api/clientes-potenciales/${id}`, { 
                             method: 'DELETE',
                             headers: { 'Authorization': 'Bearer DPI2025Admin' } 
                         });
                         
+                        console.log('✅ Cliente eliminado del servidor');
+                        
+                        // Actualizar la lista local
                         CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
+                        console.log('✅ Cliente removido de la lista local. Clientes restantes:', CLIENTES_POTENCIALES.length);
+                        
+                        // Re-renderizar la vista
                         renderClientes();
                         updateClientesCount();
+                        
                         showToast('✅ Cliente eliminado exitosamente', 'success');
                         
                     } catch (error) {
+                        console.error('❌ Error al eliminar cliente:', error);
                         showToast(`❌ Error al eliminar cliente: ${error.message}`, 'error');
                     }
                 }
