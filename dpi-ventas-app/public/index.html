@@ -2300,7 +2300,48 @@
         let dailyUsageCount = 0;
         let lastUsageDate = new Date().toDateString();
 
-        // INICIALIZACIÓN
+        // VERIFICACIÓN DE CONECTIVIDAD
+        async function verificarConectividad() {
+            try {
+                console.log('🔍 Verificando conectividad del servidor...');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+                
+                const response = await fetch(`${API_BASE_URL}/api/scripts`, {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    console.log('✅ Servidor conectado correctamente');
+                    updateSystemStatus(true);
+                    return true;
+                } else {
+                    console.warn('⚠️ Servidor responde pero con error:', response.status);
+                    updateSystemStatus(false);
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Error de conectividad:', error.message);
+                updateSystemStatus(false);
+                
+                if (error.name === 'AbortError') {
+                    showToast('⚠️ El servidor no responde (timeout)', 'warning');
+                } else {
+                    showToast('❌ Sin conexión al servidor', 'error');
+                }
+                
+                return false;
+            }
+        }
+
+        // INICIALIZACIÓN CON VERIFICACIÓN DE CONECTIVIDAD
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Iniciando DPI Sistema de Ventas...');
             
@@ -2328,16 +2369,24 @@
             setInterval(updateTime, 60000);
             loadDailyUsage();
             
-            // Inicializar backup cuando sea necesario
-            setTimeout(() => {
+            // Verificar conectividad primero
+            setTimeout(async () => {
+                const conectado = await verificarConectividad();
+                
+                if (conectado) {
+                    // Solo cargar datos si hay conectividad
+                    await fetchAllData();
+                    await cargarClientesPotenciales();
+                } else {
+                    showToast('⚠️ Modo offline: No se puede conectar al servidor', 'warning');
+                }
+                
+                // Inicializar backup
                 initBackup();
             }, 1000);
             
-            // Cargar datos iniciales después de un pequeño delay
-            setTimeout(() => {
-                fetchAllData();
-                cargarClientesPotenciales();
-            }, 500);
+            // Verificar conectividad periódicamente
+            setInterval(verificarConectividad, 60000); // cada minuto
             
             console.log('✅ Sistema inicializado correctamente');
         });
@@ -2465,46 +2514,77 @@
             }
         }
 
-        // LLAMADAS A API CORREGIDAS
+        // LLAMADAS A API MEJORADAS CON MEJOR MANEJO DE ERRORES
         async function apiCall(endpoint, options = {}) {
-            try {
-                const url = `${API_BASE_URL}${endpoint}`;
-                console.log(`🔗 API Call: ${options.method || 'GET'} ${url}`);
-                
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
+            const maxRetries = 3;
+            let attempt = 0;
+            
+            while (attempt < maxRetries) {
+                try {
+                    const url = `${API_BASE_URL}${endpoint}`;
+                    console.log(`🔗 API Call (Intento ${attempt + 1}/${maxRetries}): ${options.method || 'GET'} ${url}`);
+                    
+                    // Configurar timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos
+                    
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    // Actualizar estado del sistema
+                    updateSystemStatus(true);
+                    
+                    console.log(`📊 Response Status: ${response.status} ${response.statusText}`);
+                    
+                    if (!response.ok) {
+                        let errorData;
+                        try {
+                            const errorText = await response.text();
+                            console.log(`📄 Error Response Text:`, errorText);
+                            try {
+                                errorData = JSON.parse(errorText);
+                            } catch {
+                                errorData = { error: errorText || `Error HTTP: ${response.status}` };
+                            }
+                        } catch {
+                            errorData = { error: `Error HTTP: ${response.status}` };
+                        }
+                        throw new Error(errorData.error || `Error HTTP: ${response.status}`);
                     }
-                });
-                
-                // Actualizar estado del sistema
-                updateSystemStatus(true);
-                
-                if (!response.ok) {
-                    let errorData;
-                    try {
-                        errorData = await response.json();
-                    } catch {
-                        errorData = { error: `Error HTTP: ${response.status}` };
+                    
+                    const contentType = response.headers.get("content-type");
+                    console.log(`📋 Content-Type: ${contentType}`);
+                    
+                    if (contentType?.includes("application/json")) {
+                        const data = await response.json();
+                        console.log(`✅ API Response:`, data);
+                        return data;
+                    } else {
+                        // Para blobs (como backups)
+                        const blob = await response.blob();
+                        console.log(`📦 Blob Response Size: ${blob.size} bytes`);
+                        return blob;
                     }
-                    throw new Error(errorData.error || `Error HTTP: ${response.status}`);
+                } catch (error) {
+                    console.error(`❌ Error en API call (Intento ${attempt + 1}):`, error);
+                    attempt++;
+                    
+                    if (attempt >= maxRetries) {
+                        updateSystemStatus(false);
+                        throw error;
+                    }
+                    
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 }
-                
-                const contentType = response.headers.get("content-type");
-                if (contentType?.includes("application/json")) {
-                    const data = await response.json();
-                    console.log(`✅ API Response:`, data);
-                    return data;
-                } else {
-                    // Para blobs (como backups)
-                    return await response.blob();
-                }
-            } catch (error) {
-                console.error('❌ Error en API call:', error);
-                updateSystemStatus(false);
-                throw error;
             }
         }
 
@@ -3148,67 +3228,119 @@
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        // BACKUP Y RESTORE CORREGIDOS
+        // BACKUP Y RESTORE MEJORADOS
         async function descargarBackup() {
             console.log('📥 Iniciando descarga de backup...');
             
             try {
-                showBackupStatus('📥 Preparando backup...', 'info', 'backupStatus');
+                showBackupStatus('📥 Conectando con el servidor...', 'info', 'backupStatus');
                 
-                // Construir la URL completa
                 const backupUrl = `${API_BASE_URL}/api/backup`;
                 console.log('🔗 URL de backup:', backupUrl);
+                
+                // Llamada más robusta con timeout específico
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    showBackupStatus('⏰ Timeout: El servidor tardó demasiado en responder', 'error', 'backupStatus');
+                }, 60000); // 60 segundos para backup
+                
+                showBackupStatus('📥 Descargando backup del servidor...', 'info', 'backupStatus');
                 
                 const response = await fetch(backupUrl, {
                     method: 'GET',
                     headers: {
                         'Authorization': 'Bearer DPI2025Admin',
                         'Accept': 'application/octet-stream'
-                    }
+                    },
+                    signal: controller.signal
                 });
-
+                
+                clearTimeout(timeoutId);
+                
                 console.log('📊 Response status:', response.status);
-                console.log('📊 Response headers:', response.headers);
-
+                console.log('📊 Response ok:', response.ok);
+                
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('❌ Error en respuesta del servidor:', errorText);
                     throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
                 }
 
-                const timestamp = new Date().toISOString().split('T')[0];
-                const filename = `dpi_backup_${timestamp}.db`;
-
+                showBackupStatus('📦 Procesando archivo de backup...', 'info', 'backupStatus');
+                
                 const blob = await response.blob();
-                console.log('📦 Blob size:', blob.size, 'bytes');
+                console.log('📦 Blob recibido - Tamaño:', blob.size, 'bytes, Tipo:', blob.type);
                 
                 if (blob.size === 0) {
                     throw new Error('El archivo de backup está vacío');
                 }
-
-                // Crear y descargar el archivo
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                link.style.display = 'none';
                 
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Limpiar el objeto URL
-                setTimeout(() => {
-                    window.URL.revokeObjectURL(url);
-                }, 1000);
+                if (blob.size < 1000) {
+                    console.warn('⚠️ El backup parece muy pequeño, verificando contenido...');
+                    const text = await blob.text();
+                    console.log('📄 Contenido del blob pequeño:', text);
+                    if (text.includes('error') || text.includes('Error')) {
+                        throw new Error('El servidor retornó un error: ' + text);
+                    }
+                }
 
-                showBackupStatus(`✅ Backup descargado: ${filename}`, 'success', 'backupStatus');
-                showToast('✅ Backup completo descargado exitosamente', 'success');
+                // Crear timestamp más legible
+                const now = new Date();
+                const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+                const filename = `dpi_backup_${timestamp}.db`;
+
+                showBackupStatus('💾 Guardando archivo...', 'info', 'backupStatus');
+
+                // Crear y descargar el archivo con mejor compatibilidad
+                try {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    
+                    // Agregar al DOM temporalmente
+                    document.body.appendChild(link);
+                    
+                    // Simular click
+                    link.click();
+                    
+                    // Limpiar
+                    document.body.removeChild(link);
+                    
+                    // Liberar memoria después de un delay
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                    }, 2000);
+
+                    showBackupStatus(`✅ Backup descargado exitosamente: ${filename} (${blob.size} bytes)`, 'success', 'backupStatus');
+                    showToast('✅ Backup descargado exitosamente', 'success');
+                    
+                } catch (downloadError) {
+                    console.error('❌ Error al descargar archivo:', downloadError);
+                    
+                    // Fallback: intentar con navigator.msSaveBlob para IE
+                    if (navigator.msSaveBlob) {
+                        navigator.msSaveBlob(blob, filename);
+                        showBackupStatus(`✅ Backup descargado (método IE): ${filename}`, 'success', 'backupStatus');
+                    } else {
+                        throw new Error('No se pudo iniciar la descarga del archivo');
+                    }
+                }
 
             } catch (error) {
                 console.error('❌ Error completo en descarga de backup:', error);
-                showBackupStatus(`❌ Error: ${error.message}`, 'error', 'backupStatus');
-                showToast('❌ Error al descargar backup: ' + error.message, 'error');
+                
+                let errorMessage = error.message;
+                if (error.name === 'AbortError') {
+                    errorMessage = 'La descarga fue cancelada por timeout';
+                } else if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+                    errorMessage = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
+                }
+                
+                showBackupStatus(`❌ Error: ${errorMessage}`, 'error', 'backupStatus');
+                showToast('❌ Error al descargar backup: ' + errorMessage, 'error');
             }
         }
 
@@ -3389,18 +3521,25 @@
             }
         }
 
-        // FUNCIÓN ELIMINAR CLIENTE CORREGIDA
+        // FUNCIÓN ELIMINAR CLIENTE MEJORADA
         async function eliminarCliente(id) {
-            console.log('🗑️ Iniciando eliminación de cliente ID:', id);
+            console.log('🗑️ === INICIANDO ELIMINACIÓN DE CLIENTE ===');
+            console.log('🆔 Cliente ID:', id);
+            console.log('📊 Total clientes actuales:', CLIENTES_POTENCIALES.length);
             
-            const cliente = CLIENTES_POTENCIALES.find(c => c.id === id);
+            const cliente = CLIENTES_POTENCIALES.find(c => c.id == id); // Usar == para comparación flexible
             if (!cliente) {
                 console.error('❌ Cliente no encontrado en la lista local:', id);
-                showToast('❌ Cliente no encontrado', 'error');
+                console.log('📋 IDs disponibles:', CLIENTES_POTENCIALES.map(c => c.id));
+                showToast('❌ Cliente no encontrado en la lista local', 'error');
                 return;
             }
             
-            console.log('✅ Cliente encontrado:', cliente.nombre);
+            console.log('✅ Cliente encontrado:', {
+                id: cliente.id,
+                nombre: cliente.nombre,
+                tipo: cliente.tipo
+            });
             
             showModal(
                 '🗑️ Eliminar Cliente', 
@@ -3408,28 +3547,67 @@
                 'danger',
                 async () => {
                     try {
-                        console.log('🔗 Enviando DELETE a:', `/api/clientes-potenciales/${id}`);
+                        console.log('🔄 Iniciando llamada a API para eliminar...');
                         
-                        await apiCall(`/api/clientes-potenciales/${id}`, { 
+                        const deleteUrl = `/api/clientes-potenciales/${id}`;
+                        console.log('🔗 URL de eliminación:', `${API_BASE_URL}${deleteUrl}`);
+                        
+                        // Mostrar toast de progreso
+                        showToast('🔄 Eliminando cliente...', 'default');
+                        
+                        const response = await apiCall(deleteUrl, { 
                             method: 'DELETE',
-                            headers: { 'Authorization': 'Bearer DPI2025Admin' } 
+                            headers: { 
+                                'Authorization': 'Bearer DPI2025Admin',
+                                'Content-Type': 'application/json'
+                            } 
                         });
                         
-                        console.log('✅ Cliente eliminado del servidor');
+                        console.log('✅ Respuesta del servidor:', response);
+                        console.log('✅ Cliente eliminado del servidor exitosamente');
                         
-                        // Actualizar la lista local
-                        CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id !== id);
-                        console.log('✅ Cliente removido de la lista local. Clientes restantes:', CLIENTES_POTENCIALES.length);
+                        // Actualizar la lista local - usar == para comparación flexible
+                        const clientesAnteriores = CLIENTES_POTENCIALES.length;
+                        CLIENTES_POTENCIALES = CLIENTES_POTENCIALES.filter(c => c.id != id);
+                        
+                        console.log('📊 Clientes antes:', clientesAnteriores);
+                        console.log('📊 Clientes después:', CLIENTES_POTENCIALES.length);
+                        console.log('✅ Cliente removido de la lista local');
+                        
+                        // Verificar que efectivamente se eliminó
+                        if (CLIENTES_POTENCIALES.length === clientesAnteriores) {
+                            console.warn('⚠️ ADVERTENCIA: La lista local no cambió de tamaño');
+                        }
                         
                         // Re-renderizar la vista
+                        console.log('🔄 Re-renderizando vista de clientes...');
                         renderClientes();
                         updateClientesCount();
                         
                         showToast('✅ Cliente eliminado exitosamente', 'success');
+                        console.log('✅ === ELIMINACIÓN COMPLETADA ===');
                         
                     } catch (error) {
-                        console.error('❌ Error al eliminar cliente:', error);
-                        showToast(`❌ Error al eliminar cliente: ${error.message}`, 'error');
+                        console.error('❌ === ERROR EN ELIMINACIÓN ===');
+                        console.error('❌ Tipo de error:', error.name);
+                        console.error('❌ Mensaje:', error.message);
+                        console.error('❌ Stack trace:', error.stack);
+                        
+                        let errorMessage = 'Error desconocido';
+                        if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+                            errorMessage = 'Error de conexión con el servidor';
+                        } else if (error.message.includes('404')) {
+                            errorMessage = 'Cliente no encontrado en el servidor';
+                        } else if (error.message.includes('403')) {
+                            errorMessage = 'No tienes permisos para eliminar clientes';
+                        } else if (error.message.includes('500')) {
+                            errorMessage = 'Error interno del servidor';
+                        } else {
+                            errorMessage = error.message;
+                        }
+                        
+                        showToast(`❌ Error al eliminar cliente: ${errorMessage}`, 'error');
+                        console.log('❌ === FIN ERROR ===');
                     }
                 }
             );
@@ -3931,6 +4109,47 @@ Generado por DPI Sistema de Ventas`.trim();
             if (event && event.target !== modal) return;
             if (modal) modal.remove();
         }
+
+        // FUNCIÓN DE DIAGNÓSTICO
+        window.diagnostico = function() {
+            console.log('🔍 === DIAGNÓSTICO DEL SISTEMA ===');
+            console.log('🌐 API Base URL:', API_BASE_URL);
+            console.log('👤 Autenticado:', isAuthenticated);
+            console.log('📊 Scripts Data:', Object.keys(SCRIPTS_DATA).map(cat => `${cat}: ${SCRIPTS_DATA[cat]?.length || 0}`));
+            console.log('👥 Clientes Potenciales:', CLIENTES_POTENCIALES.length);
+            console.log('📋 Vista Actual:', currentView);
+            console.log('🔗 Estado de Conectividad:', document.getElementById('systemStatusIcon')?.textContent);
+            
+            // Test de conectividad
+            fetch(`${API_BASE_URL}/api/scripts`)
+                .then(response => {
+                    console.log('✅ Test de conectividad exitoso:', response.status);
+                })
+                .catch(error => {
+                    console.error('❌ Test de conectividad falló:', error.message);
+                });
+            
+            return {
+                apiUrl: API_BASE_URL,
+                authenticated: isAuthenticated,
+                scriptsData: SCRIPTS_DATA,
+                clientesCount: CLIENTES_POTENCIALES.length,
+                currentView: currentView
+            };
+        };
+
+        // Hacer funciones globales para debugging
+        window.testEliminarCliente = function(id) {
+            console.log('🧪 Testing eliminar cliente:', id);
+            eliminarCliente(id);
+        };
+
+        window.testDescargarBackup = function() {
+            console.log('🧪 Testing descargar backup...');
+            descargarBackup();
+        };
+
+        window.verificarConectividad = verificarConectividad;
 
         // Hacer funciones globales
         window.switchMode = switchMode;
